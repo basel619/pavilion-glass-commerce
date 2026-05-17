@@ -71,37 +71,37 @@ function Home() {
         </div>
 
         {/* Main Content Container - Flex Grow to push features bar to bottom */}
-        <div className="relative z-10 container mx-auto px-6 flex-1 flex flex-col items-center justify-center pt-32 pb-16 text-center">
+        <div className="relative z-10 container mx-auto px-6 flex-1 flex flex-col items-center justify-center pt-24 pb-12 text-center">
 
           <div className="animate-slide-up space-y-4 max-w-5xl">
-            <h1 className="relative inline-block mb-4">
-              {/* Background Glow Text */}
-              <span className="absolute -inset-x-24 -top-12 text-[10rem] sm:text-[18rem] font-black uppercase opacity-[0.03] tracking-[0.3em] select-none pointer-events-none blur-[4px] hidden lg:block">
+            <h1 className="relative inline-block mb-2">
+              {/* Glow Behind */}
+              <span className="absolute inset-0 block text-5xl sm:text-[6rem] lg:text-[8rem] font-black leading-none tracking-[0.02em] uppercase text-primary/30 blur-2xl select-none" aria-hidden="true">
                 PAVILION
               </span>
               
               {/* Main Text */}
-              <span className="block text-7xl sm:text-[11rem] lg:text-[13rem] font-black leading-none tracking-[0.02em] uppercase gradient-text drop-shadow-[0_20px_50px_rgba(0,0,0,0.8)] filter brightness-110">
+              <span className="block text-5xl sm:text-[6rem] lg:text-[8rem] font-black leading-none tracking-[0.02em] uppercase gradient-text drop-shadow-[0_20px_50px_rgba(0,0,0,0.8)] filter brightness-110">
                 PAVILION
               </span>
             </h1>
 
-            <div className="relative space-y-4">
-              <div className="h-1 w-24 bg-gradient-to-r from-transparent via-primary to-transparent mx-auto mb-6" />
-              <h2 className="text-xl sm:text-4xl font-black text-white tracking-tight max-w-3xl mx-auto drop-shadow-2xl">
+            <div className="relative space-y-3">
+              <div className="h-1 w-16 bg-gradient-to-r from-transparent via-primary to-transparent mx-auto mb-4" />
+              <h2 className="text-lg sm:text-2xl font-black text-white tracking-tight max-w-3xl mx-auto drop-shadow-2xl">
                 {t("hero_title")}
               </h2>
-              <p className="text-base sm:text-lg text-white/70 max-w-xl mx-auto font-bold leading-relaxed opacity-90 drop-shadow-lg">
+              <p className="text-sm sm:text-base text-white/70 max-w-xl mx-auto font-bold leading-relaxed opacity-90 drop-shadow-lg">
                 {t("hero_sub")}
               </p>
             </div>
           </div>
 
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-6 mt-12 animate-fade-in delay-500">
-            <Link to="/shop" className="btn-primary !px-16 !py-6 text-lg font-black tracking-[0.1em] uppercase glow-primary-sm hover:glow-primary hover:scale-105 active:scale-95 transition-all duration-300">
-              {t("shop_now")} <HeroArrowIcon className="w-6 h-6 ms-4" />
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mt-8 animate-fade-in delay-500">
+            <Link to="/shop" className="btn-primary !px-10 !py-4 text-base font-black tracking-[0.1em] uppercase glow-primary-sm hover:glow-primary hover:scale-105 active:scale-95 transition-all duration-300">
+              {t("shop_now")} <HeroArrowIcon className="w-5 h-5 ms-3" />
             </Link>
-            <Link to="/contact" className="btn-ghost !px-16 !py-6 text-lg font-black tracking-[0.1em] uppercase backdrop-blur-2xl border-white/20 hover:bg-white/15 hover:scale-105 active:scale-95 transition-all duration-300">
+            <Link to="/contact" className="btn-ghost !px-10 !py-4 text-base font-black tracking-[0.1em] uppercase backdrop-blur-2xl border-white/20 hover:bg-white/15 hover:scale-105 active:scale-95 transition-all duration-300">
               {t("contact")}
             </Link>
           </div>

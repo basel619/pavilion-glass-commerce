@@ -15,7 +15,18 @@ function createSupabaseClient() {
     ];
     const message = `Missing Supabase environment variable(s): ${missing.join(', ')}. Connect Supabase in Lovable Cloud.`;
     console.error(`[Supabase] ${message}`);
-    throw new Error(message);
+    // Return a fallback client instead of throwing to prevent React Error Boundary rendering freezes.
+    return createClient<Database>(
+      SUPABASE_URL || 'https://placeholder.supabase.co',
+      SUPABASE_PUBLISHABLE_KEY || 'placeholder-key',
+      {
+        auth: {
+          storage: typeof window !== 'undefined' ? localStorage : undefined,
+          persistSession: true,
+          autoRefreshToken: true,
+        }
+      }
+    );
   }
 
   return createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {

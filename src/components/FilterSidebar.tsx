@@ -9,7 +9,7 @@ export interface FilterState {
   price: [number, number];
 }
 
-export interface BrandOpt { id: string; name: string; parent_id: string | null; }
+export interface BrandOpt { id: string; name_ar: string; name_en: string; parent_id?: string | null; }
 export interface CatOpt { id: string; name_ar: string; name_en: string; }
 
 interface Props {
@@ -90,7 +90,7 @@ export function FilterSidebar({ filters, onChange, brands, categories, maxPrice 
                 <input type="checkbox" checked={local.brands.includes(p.id)}
                   onChange={() => { const v = { ...local, brands: toggle(local.brands, p.id) }; setLocal(v); onChange(v); }}
                   className="accent-primary" />
-                <span className="font-medium">{p.name}</span>
+                <span className="font-medium">{lang === "ar" ? p.name_ar : p.name_en}</span>
               </label>
               {childrenOf(p.id).length > 0 && local.brands.includes(p.id) && (
                 <div className="ms-5 mt-1 space-y-1">
@@ -99,7 +99,7 @@ export function FilterSidebar({ filters, onChange, brands, categories, maxPrice 
                       <input type="checkbox" checked={local.brands.includes(ch.id)}
                         onChange={() => { const v = { ...local, brands: toggle(local.brands, ch.id) }; setLocal(v); onChange(v); }}
                         className="accent-primary" />
-                      {ch.name}
+                      {lang === "ar" ? ch.name_ar : ch.name_en}
                     </label>
                   ))}
                 </div>

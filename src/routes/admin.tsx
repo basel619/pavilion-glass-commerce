@@ -1,9 +1,9 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Layout } from "@/components/Layout";
+import { AdminLayout } from "@/components/AdminLayout";
 import { supabase } from "@/integrations/supabase/client";
 import { useI18n } from "@/lib/i18n";
-import { Package, ShoppingBag, Users, DollarSign, Plus, Trash2, Edit2, X, LogOut } from "lucide-react";
+import { Package, ShoppingBag, Users, DollarSign, Plus, Trash2, Edit2, Eye, X, LogOut, ShieldCheck, Lock, Mail, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/admin")({ component: AdminDashboard });
@@ -15,68 +15,254 @@ interface Product {
   stock: number; in_stock: boolean; rating?: number;
   image?: string | null; gallery?: string[] | null;
   category_id?: string | null; brand_id?: string | null; model_id?: string | null;
-  tags?: string[] | null;
+  tags?: string[] | null; brand?: string | null;
 }
 
 function AdminDashboard() {
   const { t, lang } = useI18n();
   const nav = useNavigate();
-  const [user, setUser] = useState<any>(null);
-  const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
-  const [tab, setTab] = useState<"overview" | "products" | "orders">("overview");
+  const [isAuth, setIsAuth] = useState<boolean | null>(null);
+  const [tab, setTab] = useState<"overview" | "products" | "orders" | "categories" | "brands" | "settings">("overview");
   const [stats, setStats] = useState({ visits: 0, orders: 0, revenue: 0, products: 0 });
   const [products, setProducts] = useState<Product[]>([]);
   const [orders, setOrders] = useState<any[]>([]);
   const [cats, setCats] = useState<any[]>([]);
   const [brands, setBrands] = useState<any[]>([]);
   const [editing, setEditing] = useState<Product | null>(null);
+  const [editingCategory, setEditingCategory] = useState<{ id?: string, name_ar: string, name_en: string, image?: string } | null>(null);
+  const [editingBrand, setEditingBrand] = useState<any | null>(null);
+  const [viewingOrder, setViewingOrder] = useState<any | null>(null);
+  
+  // Login form state
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      const u = data.session?.user ?? null;
-      setUser(u);
-      if (!u) { nav({ to: "/login" }); return; }
-      checkAdmin(u.id);
-    });
-    const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => {
-      setUser(s?.user ?? null);
-      if (!s?.user) nav({ to: "/login" });
-    });
-    return () => sub.subscription.unsubscribe();
-  }, [nav]);
+    const auth = localStorage.getItem("isAdmin") === "true";
+    setIsAuth(auth);
+    if (auth) {
+      loadAll();
+    } else {
+      setIsAuth(false);
+    }
+  }, []);
 
-  const checkAdmin = async (uid: string) => {
-    const { data } = await supabase.from("user_roles").select("role").eq("user_id", uid).eq("role", "admin").maybeSingle();
-    setIsAdmin(!!data);
-    if (data) loadAll();
+  useEffect(() => {
+    if (!isAuth) return;
+
+    // Full Real-time Sync
+    const channel = supabase.channel("admin-realtime-all")
+      .on("postgres_changes", { event: "*", schema: "public", table: "orders" }, (payload) => {
+        if (payload.eventType === "INSERT") {
+          toast.info(lang === "ar" ? `طلب جديد من ${payload.new.customer_name}` : `New order from ${payload.new.customer_name}`, {
+            description: `${payload.new.total.toLocaleString()} ${t("iqd")}`,
+            duration: 10000,
+          });
+        }
+        loadAll();
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "products" }, () => loadAll())
+      .on("postgres_changes", { event: "*", schema: "public", table: "categories" }, () => loadAll())
+      .on("postgres_changes", { event: "*", schema: "public", table: "brands" }, () => loadAll())
+      .subscribe();
+
+    // Tab listener
+    const onTab = (e: any) => setTab(e.detail);
+    window.addEventListener("admin-tab-change", onTab);
+
+    return () => { 
+      supabase.removeChannel(channel); 
+      window.removeEventListener("admin-tab-change", onTab);
+    };
+  }, [isAuth, lang]);
+
+  const handleLogin = (e: React.FormEvent) => {
+    e.preventDefault();
+    setBusy(true);
+    const savedPass = localStorage.getItem("adminPassword") || "pavilion2026";
+    if (email === "admin@pavilion.com" && password === savedPass) {
+      localStorage.setItem("isAdmin", "true");
+      setIsAuth(true);
+      toast.success(lang === "ar" ? "أهلاً بك" : "Welcome");
+      loadAll();
+    } else {
+      toast.error(lang === "ar" ? "بيانات خاطئة" : "Invalid credentials");
+    }
+    setBusy(false);
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem("isAdmin");
+    setIsAuth(false);
+    supabase.auth.signOut();
+  };
+
+  const runDiagnostics = async () => {
+    setBusy(true);
+    try {
+      console.log("Running Diagnostics...");
+      const { data: testData, error: testErr } = await supabase.from("orders").select("count", { count: "exact", head: true });
+      
+      if (testErr) {
+        console.error("Diagnostic Error (Select):", testErr);
+        toast.error(`خطأ في الاتصال: ${testErr.message} (Code: ${testErr.code})`);
+      } else {
+        console.log("Connection OK. Orders count:", testData);
+        toast.success(`الاتصال سليم. عدد الطلبات في القاعدة: ${testData?.[0]?.count ?? 0}`);
+      }
+
+      // Try a test insert
+      const { error: insErr } = await supabase.from("orders").insert([{
+        customer_name: "Test User",
+        customer_phone: "0000",
+        total: 0,
+        items: [],
+        source: "diagnostic_test"
+      }]);
+
+      if (insErr) {
+        console.error("Diagnostic Error (Insert):", insErr);
+        toast.error(`فشل الإضافة التجريبية: ${insErr.message}. يرجى التأكد من تعطيل RLS.`);
+      } else {
+        toast.success("تمت الإضافة التجريبية بنجاح! قاعدة البيانات تعمل.");
+        await loadAll();
+      }
+    } catch (err: any) {
+      console.error("Fatal Diagnostic Error:", err);
+      toast.error(`خطأ فادح: ${err.message}`);
+    } finally {
+      setBusy(false);
+    }
   };
 
   const loadAll = async () => {
-    const [v, o, p, c, b] = await Promise.all([
-      supabase.from("visits").select("id", { count: "exact", head: true }),
-      supabase.from("orders").select("*").order("created_at", { ascending: false }),
-      supabase.from("products").select("*").order("created_at", { ascending: false }),
-      supabase.from("categories").select("*"),
-      supabase.from("brands").select("*"),
-    ]);
-    setOrders(o.data ?? []);
-    setProducts((p.data ?? []) as Product[]);
-    setCats(c.data ?? []);
-    setBrands(b.data ?? []);
-    const revenue = (o.data ?? []).reduce((s, x: any) => s + Number(x.total || 0), 0);
-    setStats({ visits: v.count ?? 0, orders: (o.data ?? []).length, revenue, products: (p.data ?? []).length });
+    try {
+      const [v, o, p, c, b] = await Promise.all([
+        supabase.from("visits").select("id", { count: "exact", head: true }),
+        supabase.from("orders").select("*").order("created_at", { ascending: false }),
+        supabase.from("products").select("*").order("created_at", { ascending: false }),
+        supabase.from("categories").select("*"),
+        supabase.from("brands").select("*"),
+      ]);
+      setOrders(o.data ?? []);
+      setProducts((p.data ?? []) as Product[]);
+      setCats(c.data ?? []);
+      setBrands(b.data ?? []);
+      const revenue = (o.data ?? []).reduce((s, x: any) => s + Number(x.total || 0), 0);
+      setStats({ visits: v.count ?? 0, orders: (o.data ?? []).length, revenue, products: (p.data ?? []).length });
+    } catch (err) {
+      console.error("Load failed:", err);
+      toast.error("Failed to load data");
+    }
+  };
+
+  const uploadFile = async (file: File) => {
+    const ext = file.name.split(".").pop();
+    const name = `${Date.now()}-${Math.random().toString(36).substring(2, 7)}.${ext}`;
+    const { data, error } = await supabase.storage.from("images").upload(name, file);
+    if (error) throw error;
+    const { data: { publicUrl } } = supabase.storage.from("images").getPublicUrl(name);
+    return publicUrl;
   };
 
   const saveProduct = async (p: Product) => {
-    const payload: any = { ...p };
-    if (payload.tags && typeof payload.tags === "string") payload.tags = (payload.tags as any).split(",").map((s: string) => s.trim()).filter(Boolean);
-    delete payload.id;
-    const res = p.id
-      ? await supabase.from("products").update(payload).eq("id", p.id)
-      : await supabase.from("products").insert(payload);
-    if (res.error) return toast.error(res.error.message);
-    toast.success(lang === "ar" ? "تم الحفظ" : "Saved");
-    setEditing(null);
+    setBusy(true);
+    try {
+      console.log("Saving product:", p);
+      const payload: any = { ...p };
+      if (payload.tags && typeof payload.tags === "string") payload.tags = (payload.tags as any).split(",").map((s: string) => s.trim()).filter(Boolean);
+      
+      // Clean up optional IDs to avoid schema errors if columns are missing
+      if (!payload.brand_id) delete payload.brand_id;
+      if (!payload.category_id) delete payload.category_id;
+      if (!payload.sku) delete payload.sku;
+      if (payload.rating === undefined) delete payload.rating;
+
+      const id = payload.id;
+      delete payload.id;
+      
+      const res = id
+        ? await supabase.from("products").update(payload).eq("id", id)
+        : await supabase.from("products").insert([payload]);
+        
+      if (res.error) {
+        console.error("Supabase error:", res.error);
+        throw new Error(`${res.error.message} (Code: ${res.error.code})`);
+      }
+      
+      toast.success(lang === "ar" ? "تم حفظ المنتج" : "Product saved");
+      setEditing(null);
+      await loadAll();
+    } catch (err: any) {
+      console.error("Save error details:", err);
+      toast.error(lang === "ar" ? `فشل الحفظ: ${err.message}` : `Save failed: ${err.message}`, { duration: 5000 });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const saveCategory = async (cat: any) => {
+    setBusy(true);
+    try {
+      console.log("Saving category:", cat);
+      if (!cat.name_ar || !cat.name_en) throw new Error(lang === "ar" ? "الاسم مطلوب" : "Name is required");
+      const payload: any = { name_ar: cat.name_ar, name_en: cat.name_en };
+      // Only send image if col exists or if value is provided
+      if (cat.image !== undefined) payload.image = cat.image || null;
+      
+      const id = cat.id;
+      const res = id 
+        ? await supabase.from("categories").update(payload).eq("id", id)
+        : await supabase.from("categories").insert([payload]);
+        
+      if (res.error) {
+        console.error("Supabase error:", res.error);
+        throw new Error(`${res.error.message} (Code: ${res.error.code})`);
+      }
+      
+      toast.success(lang === "ar" ? "تم حفظ القسم" : "Category saved");
+      setEditingCategory(null);
+      await loadAll();
+    } catch (err: any) {
+      console.error("Save error details:", err);
+      toast.error(lang === "ar" ? `فشل الحفظ: ${err.message}` : `Save failed: ${err.message}`, { duration: 5000 });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const saveBrand = async () => {
+    if (!editingBrand) return;
+    setBusy(true);
+    try {
+      const payload: any = { 
+        name_ar: editingBrand.name_ar, 
+        name_en: editingBrand.name_en
+      };
+      // Only send image if it's provided, to avoid schema error if col missing
+      if (editingBrand.image) payload.image = editingBrand.image;
+      
+      let res;
+      if (editingBrand.id) res = await supabase.from("brands").update(payload).eq("id", editingBrand.id);
+      else res = await supabase.from("brands").insert([payload]);
+
+      if (res.error) throw res.error;
+      toast.success(lang === "ar" ? "تم الحفظ" : "Saved");
+      setEditingBrand(null);
+      loadAll();
+    } catch (e: any) {
+      toast.error(e.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const deleteBrand = async (id: string) => {
+    if (!confirm(lang === "ar" ? "هل أنت متأكد؟" : "Are you sure?")) return;
+    const { error } = await supabase.from("brands").delete().eq("id", id);
+    if (error) return toast.error(error.message);
     loadAll();
   };
 
@@ -90,105 +276,397 @@ function AdminDashboard() {
   const updateOrderStatus = async (id: string, status: string) => {
     const { error } = await supabase.from("orders").update({ status }).eq("id", id);
     if (error) return toast.error(error.message);
+    toast.success(lang === "ar" ? "تم تحديث الحالة" : "Status updated");
     loadAll();
   };
 
-  if (!user) return null;
-  if (isAdmin === null) return <Layout><div className="text-center py-20">…</div></Layout>;
-  if (!isAdmin) {
+  const changeAdminPassword = () => {
+    if (newPassword.length < 6) {
+      toast.error(lang === "ar" ? "كلمة السر قصيرة جداً" : "Password too short");
+      return;
+    }
+    localStorage.setItem("adminPassword", newPassword);
+    toast.success(lang === "ar" ? "تم تغيير كلمة السر بنجاح" : "Password changed successfully");
+    setNewPassword("");
+  };
+
+  const getStatusLabel = (s: string) => {
+    if (lang !== "ar") return s;
+    const map: any = {
+      pending: "قيد الانتظار",
+      confirmed: "تم التأكيد",
+      shipped: "تم الشحن",
+      delivered: "تم التسليم",
+      cancelled: "ملغي"
+    };
+    return map[s] || s;
+  };
+
+
+  const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = async (ev) => {
+      const text = ev.target?.result as string;
+      const lines = text.split("\n").filter(l => l.trim());
+      const headers = lines[0].split(",").map(h => h.trim());
+      const data = lines.slice(1).map(line => {
+        const values = line.split(",").map(v => v.trim());
+        const obj: any = {};
+        headers.forEach((h, i) => obj[h] = values[i]);
+        return {
+          name_ar: obj.name_ar,
+          name_en: obj.name_en,
+          regular_price: Number(obj.regular_price || 0),
+          stock: Number(obj.stock || 0),
+          in_stock: Number(obj.stock || 0) > 0,
+          sku: obj.sku || null,
+          description_ar: obj.description_ar || null,
+          description_en: obj.description_en || null,
+        };
+      });
+      const { error } = await supabase.from("products").insert(data);
+      if (error) { 
+        console.error("Order error:", error);
+        toast.error(lang === "ar" ? `فشل الطلب: ${error.message}` : `Order failed: ${error.message}`); 
+        return; 
+      }
+      toast.success(lang === "ar" ? "تم استيراد المنتجات" : `Imported ${data.length} products`); 
+      loadAll();
+    };
+    reader.readAsText(file);
+  };
+
+  // 1. Loading state
+  if (isAuth === null) return <div className="min-h-screen bg-[#0a051a] flex items-center justify-center">…</div>;
+
+  // 2. Login Screen
+  if (!isAuth) {
     return (
-      <Layout>
-        <div className="glass-strong rounded-2xl p-10 max-w-md mx-auto text-center mt-10 space-y-3">
-          <h2 className="text-xl font-bold">{lang === "ar" ? "وصول مقيّد" : "Access restricted"}</h2>
-          <p className="text-sm text-muted-foreground">
-            {lang === "ar"
-              ? `حسابك (${user.email}) لا يملك صلاحية الإدارة. شغّل الأمر التالي في قاعدة البيانات لمنحك الصلاحية:`
-              : `Your account (${user.email}) is not an admin. Run this in the database to grant access:`}
-          </p>
-          <code className="block glass rounded-lg p-3 text-xs text-start break-all">
-            INSERT INTO user_roles (user_id, role) VALUES ('{user.id}', 'admin');
-          </code>
-          <button onClick={() => supabase.auth.signOut()} className="glass rounded-lg px-4 py-2 text-sm">{t("logout")}</button>
+      <div className="min-h-screen flex flex-col items-center justify-center bg-[#0a051a] p-4 text-foreground">
+        <div className="fixed inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-primary/10 blur-[120px] rounded-full animate-pulse" />
+          <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-accent/10 blur-[120px] rounded-full animate-pulse delay-700" />
         </div>
-      </Layout>
+        <div className="w-full max-w-md relative z-10">
+          <div className="text-center mb-8">
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-primary to-primary-glow glow-primary mb-4">
+              <ShieldCheck className="w-8 h-8 text-primary-foreground" />
+            </div>
+            <h1 className="text-3xl font-extrabold tracking-tight"><span className="gradient-text">Admin Login</span></h1>
+          </div>
+          <form onSubmit={handleLogin} className="glass-strong rounded-3xl p-8 shadow-2xl border border-white/5 space-y-6">
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-muted-foreground uppercase tracking-widest ps-1">Email</label>
+                <div className="relative group">
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
+                  <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="admin@pavilion.com"
+                    className="w-full h-12 bg-white/5 border border-white/10 rounded-xl ps-10 pe-4 text-sm outline-none focus:border-primary/50 focus:ring-4 focus:ring-primary/10 transition-all" />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-muted-foreground uppercase tracking-widest ps-1">Password</label>
+                <div className="relative group">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
+                  <input type="password" required value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••"
+                    className="w-full h-12 bg-white/5 border border-white/10 rounded-xl ps-10 pe-4 text-sm outline-none focus:border-primary/50 focus:ring-4 focus:ring-primary/10 transition-all" />
+                </div>
+              </div>
+            </div>
+            <button disabled={busy} className="w-full h-12 rounded-xl bg-gradient-to-r from-primary to-primary-glow text-primary-foreground font-bold shadow-lg hover:scale-[1.02] transition-all disabled:opacity-50">
+              {busy ? "Entering..." : "Enter Dashboard"}
+            </button>
+            <div className="pt-4 border-t border-white/5 text-center">
+              <button type="button" onClick={() => nav({ to: "/" })} className="text-xs text-muted-foreground hover:text-foreground inline-flex items-center gap-1.5 transition">
+                <ArrowLeft className="w-3 h-3" /> Back to Storefront
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
     );
   }
 
+  // 3. Dashboard Screen
   return (
-    <Layout>
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-3xl font-bold gradient-text">{t("dashboard")}</h1>
-        <button onClick={() => supabase.auth.signOut()} className="glass rounded-lg px-3 py-2 text-sm flex items-center gap-2">
-          <LogOut className="w-4 h-4" /> {t("logout")}
-        </button>
+    <AdminLayout>
+      <div className="flex items-center justify-between mb-8">
+        <div>
+          <h1 className="text-3xl font-extrabold gradient-text">
+            {tab === "overview" ? (lang === "ar" ? "نظرة عامة" : "Overview") : 
+             tab === "products" ? t("products") :
+             tab === "orders" ? t("orders") :
+             tab === "categories" ? (lang === "ar" ? "الأقسام" : "Categories") :
+             tab === "brands" ? (lang === "ar" ? "الماركات" : "Brands") :
+             (lang === "ar" ? "الإعدادات" : "Settings")}
+          </h1>
+          <p className="text-xs text-muted-foreground mt-1">
+            {lang === "ar" ? "لوحة تحكم Pavilion" : "Pavilion Admin Dashboard"}
+          </p>
+        </div>
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      {/* Stats */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         {[
-          { icon: Users, label: t("visitors"), value: stats.visits, color: "from-blue-500 to-cyan-400" },
-          { icon: ShoppingBag, label: t("total_orders"), value: stats.orders, color: "from-primary to-primary-glow" },
-          { icon: DollarSign, label: t("revenue"), value: `${stats.revenue.toLocaleString()} ${t("iqd")}`, color: "from-emerald-500 to-teal-400" },
-          { icon: Package, label: t("products"), value: stats.products, color: "from-pink-500 to-rose-400" },
+          { icon: Users, label: t("visitors"), value: stats.visits, color: "from-blue-500 to-cyan-400", sub: lang === "ar" ? "زائر" : "visitors" },
+          { icon: ShoppingBag, label: t("total_orders"), value: stats.orders, color: "from-primary to-primary-glow", sub: lang === "ar" ? "طلب" : "orders" },
+          { icon: DollarSign, label: t("revenue"), value: stats.revenue.toLocaleString(), color: "from-emerald-500 to-teal-400", sub: t("iqd") },
+          { icon: Package, label: t("products"), value: stats.products, color: "from-pink-500 to-rose-400", sub: lang === "ar" ? "منتج" : "items" },
         ].map((s, i) => (
-          <div key={i} className="glass-strong rounded-2xl p-5">
-            <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${s.color} flex items-center justify-center mb-3`}>
-              <s.icon className="w-5 h-5 text-white" />
+          <div key={i} className="stat-card animate-slide-up" style={{ animationDelay: `${i * 80}ms` }}>
+            <div className="flex items-start justify-between mb-4">
+              <div className={`w-11 h-11 rounded-xl bg-gradient-to-br ${s.color} flex items-center justify-center`}>
+                <s.icon className="w-5 h-5 text-white" />
+              </div>
+              <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">{s.label}</span>
             </div>
-            <div className="text-xs text-muted-foreground">{s.label}</div>
-            <div className="text-2xl font-bold mt-1">{s.value}</div>
+            <div className="text-3xl font-extrabold mb-1">{s.value}</div>
+            <div className="text-xs text-muted-foreground">{s.sub}</div>
           </div>
         ))}
       </div>
 
-      <div className="glass rounded-2xl p-1.5 inline-flex gap-1 mb-4">
-        {(["overview", "products", "orders"] as const).map((k) => (
+      {/* Tab Bar */}
+      <div className="glass rounded-2xl p-1.5 inline-flex gap-1 mb-6 overflow-x-auto max-w-full">
+        {(["overview", "products", "orders", "categories", "brands", "settings"] as const).map((k) => (
           <button key={k} onClick={() => setTab(k)}
-            className={`px-4 py-2 rounded-xl text-sm font-medium transition ${tab === k ? "bg-gradient-to-r from-primary to-primary-glow text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}>
-            {t(k === "overview" ? "dashboard" : k)}
+            className={`px-4 py-2 rounded-xl text-sm font-bold transition-all duration-200 cursor-pointer border border-transparent whitespace-nowrap ${
+              tab === k
+                ? "bg-gradient-to-r from-primary to-primary-glow text-primary-foreground glow-primary-sm border-white/10"
+                : "text-muted-foreground hover:text-foreground hover:bg-white/6"
+            }`}>
+            {k === "overview" ? (lang === "ar" ? "نظرة عامة" : "Overview") :
+             k === "products" ? t("products") :
+             k === "orders" ? t("orders") :
+             k === "categories" ? (lang === "ar" ? "الأقسام" : "Categories") :
+             k === "brands" ? (lang === "ar" ? "الماركات" : "Brands") :
+             (lang === "ar" ? "الإعدادات" : "Settings")}
           </button>
         ))}
       </div>
 
+      {/* Overview Tab */}
       {tab === "overview" && (
-        <div className="glass-strong rounded-2xl p-6">
-          <h3 className="font-bold mb-4">{lang === "ar" ? "آخر الطلبات" : "Recent Orders"}</h3>
-          <div className="space-y-2">
-            {orders.slice(0, 5).map((o) => (
-              <div key={o.id} className="glass rounded-xl p-3 flex items-center justify-between text-sm">
-                <div><div className="font-medium">{o.customer_name}</div><div className="text-xs text-muted-foreground">{o.customer_phone} · {o.source}</div></div>
-                <div className="text-end"><div className="font-bold">{Number(o.total).toLocaleString()} {t("iqd")}</div><div className="text-xs text-muted-foreground">{new Date(o.created_at).toLocaleDateString()}</div></div>
+        <div className="glass-strong rounded-2xl overflow-hidden">
+          <div className="px-6 py-4 border-b border-[oklch(1_0_0/10%)] flex items-center justify-between">
+            <h3 className="font-bold">{lang === "ar" ? "آخر الطلبات" : "Recent Orders"}</h3>
+            <span className="badge badge-info">{orders.length} {lang === "ar" ? "طلب" : "orders"}</span>
+          </div>
+          <div className="divide-y divide-[oklch(1_0_0/6%)]">
+            {orders.slice(0, 7).map((o) => (
+              <div key={o.id} className="px-6 py-4 flex items-center justify-between hover:bg-white/3 transition">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-full bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center text-sm font-bold gradient-text shrink-0">
+                    {(o.customer_name || "?")[0]}
+                  </div>
+                  <div>
+                    <div className="font-semibold text-sm">{o.customer_name}</div>
+                    <div className="text-xs text-muted-foreground">{o.customer_phone} · {o.source}</div>
+                  </div>
+                </div>
+                <div className="text-end">
+                  <div className="font-bold text-sm gradient-text">{Number(o.total).toLocaleString()} {t("iqd")}</div>
+                  <div className="text-[12px] text-muted-foreground font-mono">{new Date(o.created_at).toLocaleString("en-GB")}</div>
+                </div>
               </div>
             ))}
-            {orders.length === 0 && <p className="text-muted-foreground text-sm">—</p>}
+            {orders.length === 0 && (
+              <div className="p-16 text-center">
+                <div className="text-4xl mb-3">📭</div>
+                <p className="text-muted-foreground text-sm">{lang === "ar" ? "لا توجد طلبات بعد" : "No orders yet"}</p>
+              </div>
+            )}
           </div>
         </div>
       )}
 
+      {/* Products Tab */}
       {tab === "products" && (
         <div className="space-y-4">
-          <button onClick={() => setEditing({ name_ar: "", name_en: "", regular_price: 0, stock: 0, in_stock: true })}
-            className="bg-gradient-to-r from-primary to-primary-glow text-primary-foreground px-4 py-2 rounded-xl flex items-center gap-2 font-semibold">
-            <Plus className="w-4 h-4" /> {t("add_product")}
-          </button>
+          <div className="flex gap-2 flex-wrap">
+            <button
+              onClick={() => setEditing({ name_ar: "", name_en: "", regular_price: 0, stock: 0, in_stock: true })}
+              className="btn-primary gap-2">
+              <Plus className="w-4 h-4" /> {t("add_product")}
+            </button>
+            <label className="btn-ghost gap-2 cursor-pointer">
+              <Package className="w-4 h-4" />
+              {lang === "ar" ? "استيراد CSV" : "Import CSV"}
+              <input type="file" accept=".csv" onChange={handleImport} className="hidden" />
+            </label>
+          </div>
           <div className="glass-strong rounded-2xl overflow-hidden">
-            <table className="w-full text-sm">
-              <thead><tr className="border-b border-glass-border text-muted-foreground">
-                <th className="text-start p-3">{lang === "ar" ? "الاسم" : "Name"}</th>
-                <th className="text-start p-3">SKU</th>
-                <th className="text-start p-3">{lang === "ar" ? "السعر" : "Price"}</th>
-                <th className="text-start p-3">{lang === "ar" ? "المخزون" : "Stock"}</th>
-                <th></th>
+            <table className="data-table">
+              <thead><tr>
+                <th>{lang === "ar" ? "المنتج" : "Product"}</th>
+                <th>SKU</th>
+                <th>{lang === "ar" ? "السعر" : "Price"}</th>
+                <th>{lang === "ar" ? "المخزون" : "Stock"}</th>
+                <th className="text-end">{lang === "ar" ? "إجراءات" : "Actions"}</th>
               </tr></thead>
               <tbody>
                 {products.map((p) => (
-                  <tr key={p.id} className="border-b border-glass-border/50 hover:bg-white/5">
-                    <td className="p-3">{lang === "ar" ? p.name_ar : p.name_en}</td>
-                    <td className="p-3 text-muted-foreground">{p.sku}</td>
-                    <td className="p-3">{(p.sale_price ?? p.regular_price).toLocaleString()}</td>
-                    <td className="p-3">{p.stock}</td>
-                    <td className="p-3 text-end">
-                      <button onClick={() => setEditing(p)} className="w-8 h-8 rounded-lg glass inline-flex items-center justify-center hover:bg-white/10 me-1"><Edit2 className="w-3.5 h-3.5" /></button>
-                      <button onClick={() => deleteProduct(p.id!)} className="w-8 h-8 rounded-lg inline-flex items-center justify-center hover:bg-destructive/20 text-destructive"><Trash2 className="w-3.5 h-3.5" /></button>
+                  <tr key={p.id}>
+                    <td>
+                      <div className="flex items-center gap-3">
+                        {p.image ? (
+                          <img src={p.image} alt="" className="w-10 h-10 rounded-lg object-cover shrink-0" />
+                        ) : (
+                          <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                            <Package className="w-4 h-4 text-primary/50" />
+                          </div>
+                        )}
+                        <div>
+                          <div className="font-semibold text-sm">{lang === "ar" ? p.name_ar : p.name_en}</div>
+                          {p.sale_price && p.sale_price < p.regular_price && (
+                            <span className="badge badge-success !text-[10px]">Sale</span>
+                          )}
+                        </div>
+                      </div>
+                    </td>
+                    <td><span className="text-xs text-muted-foreground font-mono">{p.sku || "—"}</span></td>
+                    <td>
+                      <span className="font-bold gradient-text">{(p.sale_price ?? p.regular_price).toLocaleString()}</span>
+                      <span className="text-xs text-muted-foreground ms-1">{t("iqd")}</span>
+                    </td>
+                    <td>
+                      <span className={`badge ${ p.stock > 10 ? "badge-success" : p.stock > 0 ? "badge-warning" : "badge-danger" }`}>
+                        {p.stock}
+                      </span>
+                    </td>
+                    <td>
+                      <div className="flex items-center gap-1.5 justify-end">
+                        <button onClick={() => setEditing(p)} className="icon-btn" title={t("edit")}>
+                          <Edit2 className="w-3.5 h-3.5" />
+                        </button>
+                        <button onClick={() => deleteProduct(p.id!)} className="icon-btn hover:!bg-destructive/20 hover:!text-destructive hover:!border-destructive/30" title={t("delete")}>
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+                {products.length === 0 && (
+                  <tr><td colSpan={5}>
+                    <div className="py-16 text-center">
+                      <div className="text-4xl mb-2">📦</div>
+                      <p className="text-muted-foreground text-sm">{lang === "ar" ? "لا توجد منتجات" : "No products yet"}</p>
+                    </div>
+                  </td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Orders Tab */}
+      {tab === "orders" && (
+        <div className="glass-strong rounded-2xl overflow-hidden">
+          <div className="px-6 py-4 border-b border-[oklch(1_0_0/10%)] flex items-center justify-between">
+            <h3 className="font-bold">{lang === "ar" ? "إدارة الطلبات" : "Manage Orders"}</h3>
+            <span className="badge badge-warning">{orders.filter(o => o.status === "pending").length} {lang === "ar" ? "معلق" : "pending"}</span>
+          </div>
+          <table className="data-table">
+            <thead><tr>
+              <th>{lang === "ar" ? "العميل" : "Customer"}</th>
+              <th>{lang === "ar" ? "الهاتف" : "Phone"}</th>
+              <th>{lang === "ar" ? "التاريخ والوقت" : "Date & Time"}</th>
+              <th>{t("total")}</th>
+              <th>{lang === "ar" ? "الحالة" : "Status"}</th>
+              <th className="text-end">{lang === "ar" ? "إجراءات" : "Actions"}</th>
+            </tr></thead>
+            <tbody>
+              {orders.map((o) => (
+                <tr key={o.id}>
+                  <td>
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center text-xs font-bold gradient-text shrink-0">
+                        {(o.customer_name || "?")[0]}
+                      </div>
+                      <span className="font-semibold text-sm">{o.customer_name}</span>
+                    </div>
+                  </td>
+                  <td><span className="text-xs text-muted-foreground">{o.customer_phone}</span></td>
+                  <td><span className="text-[13px] text-muted-foreground font-mono">{new Date(o.created_at).toLocaleString("en-GB")}</span></td>
+                  <td><span className="font-bold gradient-text">{Number(o.total).toLocaleString()} {t("iqd")}</span></td>
+                  <td>
+                    <select
+                      value={o.status}
+                      onChange={(e) => updateOrderStatus(o.id, e.target.value)}
+                      className="field-input !h-8 !px-2 !text-xs !rounded-lg cursor-pointer font-bold"
+                    >
+                      {["pending", "confirmed", "shipped", "delivered", "cancelled"].map((s) => (
+                        <option key={s} value={s} className="bg-[#0a051a]">{getStatusLabel(s)}</option>
+                      ))}
+                    </select>
+                  </td>
+                  <td>
+                    <div className="flex justify-end">
+                      <button onClick={() => setViewingOrder(o)} className="icon-btn" title={lang === "ar" ? "عرض الطلب" : "View Order"}>
+                        <Eye className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+              {orders.length === 0 && (
+                <tr><td colSpan={5}>
+                  <div className="py-16 text-center">
+                    <div className="text-4xl mb-2">📭</div>
+                    <p className="text-muted-foreground text-sm">{lang === "ar" ? "لا توجد طلبات" : "No orders yet"}</p>
+                  </div>
+                </td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* Categories Tab */}
+      {tab === "categories" && (
+        <div className="space-y-4">
+          <button onClick={() => setEditingCategory({ name_ar: "", name_en: "" })} className="btn-primary gap-2">
+            <Plus className="w-4 h-4" /> {lang === "ar" ? "إضافة قسم" : "Add Category"}
+          </button>
+          <div className="glass-strong rounded-2xl overflow-hidden">
+            <table className="data-table">
+              <thead><tr>
+                <th>{lang === "ar" ? "القسم" : "Category"}</th>
+                <th className="text-end">{lang === "ar" ? "إجراءات" : "Actions"}</th>
+              </tr></thead>
+              <tbody>
+                {cats.map((c) => (
+                  <tr key={c.id}>
+                    <td>
+                      <div className="flex items-center gap-3">
+                        <div className="w-12 h-10 rounded-xl bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center shrink-0 overflow-hidden border border-white/5">
+                          {c.image ? (
+                            <img src={c.image} alt="" className="w-full h-full object-cover" />
+                          ) : (
+                            <Package className="w-5 h-5 text-primary-glow" />
+                          )}
+                        </div>
+                        <span className="font-semibold text-sm">{lang === "ar" ? c.name_ar : c.name_en}</span>
+                      </div>
+                    </td>
+                    <td>
+                      <div className="flex items-center gap-1.5 justify-end">
+                        <button onClick={() => setEditingCategory(c)} className="icon-btn" title={t("edit")}>
+                          <Edit2 className="w-3.5 h-3.5" />
+                        </button>
+                        <button onClick={async () => {
+                          if (confirm(lang === "ar" ? "تأكيد الحذف؟" : "Confirm delete?")) {
+                            await supabase.from("categories").delete().eq("id", c.id);
+                            loadAll();
+                          }
+                        }} className="icon-btn hover:!bg-destructive/20 hover:!text-destructive hover:!border-destructive/30" title={t("delete")}>
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -198,88 +676,293 @@ function AdminDashboard() {
         </div>
       )}
 
-      {tab === "orders" && (
-        <div className="glass-strong rounded-2xl overflow-hidden">
-          <table className="w-full text-sm">
-            <thead><tr className="border-b border-glass-border text-muted-foreground">
-              <th className="text-start p-3">{lang === "ar" ? "العميل" : "Customer"}</th>
-              <th className="text-start p-3">{lang === "ar" ? "الهاتف" : "Phone"}</th>
-              <th className="text-start p-3">{t("source")}</th>
-              <th className="text-start p-3">{t("total")}</th>
-              <th className="text-start p-3">{lang === "ar" ? "الحالة" : "Status"}</th>
-            </tr></thead>
-            <tbody>
-              {orders.map((o) => (
-                <tr key={o.id} className="border-b border-glass-border/50 hover:bg-white/5">
-                  <td className="p-3">{o.customer_name}</td>
-                  <td className="p-3">{o.customer_phone}</td>
-                  <td className="p-3"><span className="glass rounded-full px-2 py-0.5 text-xs">{o.source}</span></td>
-                  <td className="p-3 font-bold">{Number(o.total).toLocaleString()}</td>
-                  <td className="p-3">
-                    <select value={o.status} onChange={(e) => updateOrderStatus(o.id, e.target.value)}
-                      className="glass rounded-lg px-2 py-1 text-xs bg-transparent outline-none">
-                      {["pending", "confirmed", "shipped", "delivered", "cancelled"].map((s) => <option key={s} className="bg-background">{s}</option>)}
-                    </select>
-                  </td>
-                </tr>
-              ))}
-              {orders.length === 0 && <tr><td colSpan={5} className="p-10 text-center text-muted-foreground">—</td></tr>}
-            </tbody>
-          </table>
-        </div>
-      )}
-
-      {editing && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/60 backdrop-blur-sm" onClick={() => setEditing(null)}>
-          <div className="glass-strong rounded-2xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-bold text-lg">{editing.id ? t("edit") : t("add_product")}</h3>
-              <button onClick={() => setEditing(null)} className="w-8 h-8 rounded-lg glass flex items-center justify-center"><X className="w-4 h-4" /></button>
+      {/* Category Modal */}
+      {editingCategory && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-fade-in" onMouseDown={() => setEditingCategory(null)}>
+          <div className="glass-strong rounded-3xl p-6 sm:p-8 max-w-sm w-full shadow-2xl animate-slide-up" onMouseDown={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="font-extrabold text-xl gradient-text">{editingCategory.id ? t("edit") : (lang === "ar" ? "إضافة قسم" : "Add Category")}</h3>
+              <button onClick={() => setEditingCategory(null)} className="icon-btn"><X className="w-4 h-4" /></button>
             </div>
-            <div className="grid sm:grid-cols-2 gap-3 text-sm">
-              <Field label={lang === "ar" ? "الاسم (ع)" : "Name (AR)"} value={editing.name_ar} onChange={(v) => setEditing({ ...editing, name_ar: v })} />
-              <Field label={lang === "ar" ? "الاسم (EN)" : "Name (EN)"} value={editing.name_en} onChange={(v) => setEditing({ ...editing, name_en: v })} />
-              <Field label="SKU" value={editing.sku ?? ""} onChange={(v) => setEditing({ ...editing, sku: v })} />
-              <Field label={lang === "ar" ? "صورة (URL)" : "Image URL"} value={editing.image ?? ""} onChange={(v) => setEditing({ ...editing, image: v })} />
-              <Field label={lang === "ar" ? "السعر العادي" : "Regular Price"} type="number" value={String(editing.regular_price)} onChange={(v) => setEditing({ ...editing, regular_price: Number(v) })} />
-              <Field label={lang === "ar" ? "سعر التخفيض" : "Sale Price"} type="number" value={String(editing.sale_price ?? "")} onChange={(v) => setEditing({ ...editing, sale_price: v ? Number(v) : null })} />
-              <Field label={lang === "ar" ? "المخزون" : "Stock"} type="number" value={String(editing.stock)} onChange={(v) => setEditing({ ...editing, stock: Number(v), in_stock: Number(v) > 0 })} />
-              <Field label={lang === "ar" ? "التقييم" : "Rating"} type="number" value={String(editing.rating ?? 5)} onChange={(v) => setEditing({ ...editing, rating: Number(v) })} />
-              <Select label={lang === "ar" ? "القسم" : "Category"} value={editing.category_id ?? ""} onChange={(v) => setEditing({ ...editing, category_id: v || null })}
-                options={[{ value: "", label: "—" }, ...cats.map((c) => ({ value: c.id, label: lang === "ar" ? c.name_ar : c.name_en }))]} />
-              <Select label={lang === "ar" ? "العلامة" : "Brand"} value={editing.brand_id ?? ""} onChange={(v) => setEditing({ ...editing, brand_id: v || null })}
-                options={[{ value: "", label: "—" }, ...brands.filter((b) => !b.parent_id).map((b) => ({ value: b.id, label: b.name }))]} />
-              <Select label={lang === "ar" ? "الموديل" : "Model"} value={editing.model_id ?? ""} onChange={(v) => setEditing({ ...editing, model_id: v || null })}
-                options={[{ value: "", label: "—" }, ...brands.filter((b) => b.parent_id === editing.brand_id).map((b) => ({ value: b.id, label: b.name }))]} />
-              <Field label={lang === "ar" ? "وسوم (مفصولة بفاصلة)" : "Tags (comma)"} value={(editing.tags ?? []).join(",")} onChange={(v) => setEditing({ ...editing, tags: v.split(",").map((s) => s.trim()).filter(Boolean) })} />
-              <div className="sm:col-span-2">
-                <label className="text-xs text-muted-foreground">{lang === "ar" ? "الوصف (ع)" : "Description (AR)"}</label>
-                <textarea value={editing.description_ar ?? ""} onChange={(e) => setEditing({ ...editing, description_ar: e.target.value })}
-                  className="w-full glass rounded-lg p-2 mt-1 bg-transparent outline-none focus:ring-2 focus:ring-primary" rows={2} />
-              </div>
-              <div className="sm:col-span-2">
-                <label className="text-xs text-muted-foreground">{lang === "ar" ? "الوصف (EN)" : "Description (EN)"}</label>
-                <textarea value={editing.description_en ?? ""} onChange={(e) => setEditing({ ...editing, description_en: e.target.value })}
-                  className="w-full glass rounded-lg p-2 mt-1 bg-transparent outline-none focus:ring-2 focus:ring-primary" rows={2} />
+            <div className="space-y-4">
+              <Field label={lang === "ar" ? "الاسم (ع)" : "Name (AR)"} value={editingCategory.name_ar} onChange={(v) => setEditingCategory({ ...editingCategory, name_ar: v })} />
+              <Field label={lang === "ar" ? "الاسم (EN)" : "Name (EN)"} value={editingCategory.name_en} onChange={(v) => setEditingCategory({ ...editingCategory, name_en: v })} />
+              <div className="space-y-1">
+                <label className="field-label">{lang === "ar" ? "الصورة" : "Image"}</label>
+                <div className="flex gap-2">
+                  <input type="text" value={editingCategory.image ?? ""} onChange={(e) => setEditingCategory({ ...editingCategory, image: e.target.value })} placeholder="URL" className="field-input flex-1" />
+                  <label className="icon-btn shrink-0 cursor-pointer">
+                    <Plus className="w-4 h-4" />
+                    <input type="file" className="hidden" onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        toast.promise(uploadFile(file).then(url => setEditingCategory({ ...editingCategory, image: url })), {
+                          loading: "Uploading...",
+                          success: "Uploaded!",
+                          error: "Upload failed"
+                        });
+                      }
+                    }} />
+                  </label>
+                </div>
               </div>
             </div>
-            <div className="flex gap-2 mt-6 justify-end">
-              <button onClick={() => setEditing(null)} className="glass rounded-lg px-4 py-2 text-sm">{t("cancel")}</button>
-              <button onClick={() => saveProduct(editing)} className="bg-gradient-to-r from-primary to-primary-glow text-primary-foreground px-5 py-2 rounded-lg font-semibold text-sm">{t("save")}</button>
+            <div className="flex gap-3 mt-8">
+              <button onClick={() => setEditingCategory(null)} className="btn-ghost flex-1">{t("cancel")}</button>
+              <button disabled={busy} onClick={() => saveCategory(editingCategory)} className="btn-primary flex-1">
+                {busy ? "..." : t("save")}
+              </button>
             </div>
           </div>
         </div>
       )}
-    </Layout>
+
+      {/* Product Modal */}
+      {editing && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-fade-in" onMouseDown={() => setEditing(null)}>
+          <div className="glass-strong rounded-3xl p-6 sm:p-8 max-w-3xl w-full max-h-[90vh] overflow-y-auto shadow-2xl custom-scrollbar animate-slide-up" onMouseDown={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-6 sticky top-0 bg-background/5 backdrop-blur-xl -mx-6 -mt-6 px-6 py-4 border-b border-[oklch(1_0_0/10%)] z-10">
+              <h3 className="font-extrabold text-xl gradient-text">{editing.id ? t("edit") : t("add_product")}</h3>
+              <button onClick={() => setEditing(null)} className="icon-btn"><X className="w-4 h-4" /></button>
+            </div>
+            
+            <div className="grid sm:grid-cols-2 gap-5 text-sm">
+              <div className="space-y-4">
+                <Field label={lang === "ar" ? "الاسم (ع)" : "Name (AR)"} value={editing.name_ar} onChange={(v) => setEditing({ ...editing, name_ar: v })} />
+                <Field label={lang === "ar" ? "الاسم (EN)" : "Name (EN)"} value={editing.name_en} onChange={(v) => setEditing({ ...editing, name_en: v })} />
+                <Field label="SKU" value={editing.sku ?? ""} onChange={(v) => setEditing({ ...editing, sku: v })} />
+                <div className="space-y-1">
+                  <label className="field-label">{lang === "ar" ? "الصورة" : "Image"}</label>
+                  <div className="flex gap-2">
+                    <input type="text" value={editing.image ?? ""} onChange={(e) => setEditing({ ...editing, image: e.target.value })} placeholder="URL" className="field-input flex-1" />
+                    <label className="icon-btn shrink-0 cursor-pointer">
+                      <Plus className="w-4 h-4" />
+                      <input type="file" className="hidden" onChange={async (e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          toast.promise(uploadFile(file).then(url => setEditing({ ...editing, image: url })), {
+                            loading: "Uploading...",
+                            success: "Uploaded!",
+                            error: "Upload failed"
+                          });
+                        }
+                      }} />
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <Field label={lang === "ar" ? "السعر العادي" : "Regular Price"} type="number" value={String(editing.regular_price)} onChange={(v) => setEditing({ ...editing, regular_price: Number(v) })} />
+                  <Field label={lang === "ar" ? "سعر التخفيض" : "Sale Price"} type="number" value={String(editing.sale_price ?? "")} onChange={(v) => setEditing({ ...editing, sale_price: v ? Number(v) : null })} />
+                  <Field label={lang === "ar" ? "المخزون" : "Stock"} type="number" value={String(editing.stock)} onChange={(v) => setEditing({ ...editing, stock: Number(v), in_stock: Number(v) > 0 })} />
+                  <Field label={lang === "ar" ? "التقييم" : "Rating"} type="number" value={String(editing.rating ?? 5)} onChange={(v) => setEditing({ ...editing, rating: Number(v) })} />
+                </div>
+                <Select label={lang === "ar" ? "القسم" : "Category"} value={editing.category_id ?? ""} onChange={(v) => setEditing({ ...editing, category_id: v || null })}
+                    options={[{ value: "", label: "—" }, ...cats.map((c) => ({ value: c.id, label: lang === "ar" ? c.name_ar : c.name_en }))]} />
+                <Select label={lang === "ar" ? "الماركة" : "Brand"} value={editing.brand_id ?? ""} onChange={(v) => setEditing({ ...editing, brand_id: v || null })}
+                    options={[{ value: "", label: "—" }, ...brands.map((b) => ({ value: b.id, label: lang === "ar" ? b.name_ar : b.name_en }))]} />
+              </div>
+              
+              <div className="sm:col-span-2 space-y-4 pt-2">
+                <div className="space-y-1">
+                  <label className="field-label">{lang === "ar" ? "الوصف (ع)" : "Description (AR)"}</label>
+                  <textarea value={editing.description_ar ?? ""} onChange={(e) => setEditing({ ...editing, description_ar: e.target.value })}
+                    className="field-input !h-auto py-3 min-h-[100px] custom-scrollbar" />
+                </div>
+                <div className="space-y-1">
+                  <label className="field-label">{lang === "ar" ? "الوصف (EN)" : "Description (EN)"}</label>
+                  <textarea value={editing.description_en ?? ""} onChange={(e) => setEditing({ ...editing, description_en: e.target.value })}
+                    className="field-input !h-auto py-3 min-h-[100px] custom-scrollbar" />
+                </div>
+              </div>
+            </div>
+
+            <div className="flex gap-3 mt-8 pt-6 border-t border-[oklch(1_0_0/10%)] justify-end">
+              <button onClick={() => setEditing(null)} className="btn-ghost !px-8">{t("cancel")}</button>
+              <button disabled={busy} onClick={() => saveProduct(editing)} className="btn-primary !px-10">
+                {busy ? "..." : t("save")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Order Detail Modal */}
+      {viewingOrder && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-fade-in" onMouseDown={() => setViewingOrder(null)}>
+          <div className="glass-strong rounded-3xl p-6 sm:p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl custom-scrollbar animate-slide-up" onMouseDown={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h3 className="font-extrabold text-xl gradient-text">{lang === "ar" ? "تفاصيل الطلب" : "Order Details"}</h3>
+                <p className="text-[10px] text-muted-foreground uppercase tracking-widest">{viewingOrder.id}</p>
+              </div>
+              <button onClick={() => setViewingOrder(null)} className="icon-btn"><X className="w-4 h-4" /></button>
+            </div>
+
+            <div className="grid sm:grid-cols-2 gap-8 mb-8">
+              <div className="space-y-3">
+                <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{lang === "ar" ? "العميل" : "Customer Info"}</div>
+                <div className="glass rounded-2xl p-4 space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">{lang === "ar" ? "الاسم:" : "Name:"}</span>
+                    <span className="font-bold">{viewingOrder.customer_name}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">{lang === "ar" ? "الهاتف:" : "Phone:"}</span>
+                    <a href={`tel:${viewingOrder.customer_phone}`} className="font-bold text-primary-glow hover:underline">{viewingOrder.customer_phone}</a>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">{lang === "ar" ? "العنوان:" : "Address:"}</span>
+                    <span className="font-bold text-end">{viewingOrder.customer_address || "—"}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{lang === "ar" ? "ملخص الطلب" : "Order Summary"}</div>
+                <div className="glass rounded-2xl p-4 space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">{lang === "ar" ? "المصدر:" : "Source:"}</span>
+                    <span className="badge badge-info">{viewingOrder.source}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">{lang === "ar" ? "الحالة:" : "Status:"}</span>
+                    <span className={`badge ${viewingOrder.status === 'delivered' ? 'badge-success' : 'badge-warning'}`}>{viewingOrder.status}</span>
+                  </div>
+                  <div className="flex justify-between text-sm pt-2 border-t border-white/5">
+                    <span className="font-bold">{lang === "ar" ? "الإجمالي:" : "Total:"}</span>
+                    <span className="font-bold text-lg gradient-text">{Number(viewingOrder.total).toLocaleString()} {t("iqd")}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{lang === "ar" ? "المنتجات المطلوبة" : "Ordered Items"}</div>
+              <div className="space-y-2">
+                {Array.isArray(viewingOrder.items) && viewingOrder.items.map((it: any, idx: number) => (
+                  <div key={idx} className="glass rounded-2xl p-3 flex items-center gap-4">
+                    <div className="w-14 h-14 rounded-xl overflow-hidden bg-white/5 border border-white/10 shrink-0">
+                      {it.image ? (
+                        <img src={it.image} alt="" className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-muted-foreground"><Package className="w-5 h-5 opacity-20" /></div>
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-bold text-sm truncate">{it.name}</div>
+                      <div className="text-xs text-muted-foreground">{Number(it.price).toLocaleString()} {t("iqd")} × {it.qty}</div>
+                    </div>
+                    <div className="text-end">
+                      <div className="font-bold text-sm">{(Number(it.price) * Number(it.qty)).toLocaleString()}</div>
+                      <div className="text-[10px] text-muted-foreground">{t("iqd")}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {viewingOrder.notes && (
+              <div className="mt-6 p-4 glass rounded-2xl border-primary/20">
+                <div className="text-[10px] font-bold text-primary-glow uppercase tracking-widest mb-1">{lang === "ar" ? "ملاحظات:" : "Notes:"}</div>
+                <p className="text-sm italic">{viewingOrder.notes}</p>
+              </div>
+            )}
+
+            <div className="flex gap-3 mt-8">
+              <button onClick={() => setViewingOrder(null)} className="btn-primary w-full">{lang === "ar" ? "إغلاق" : "Close"}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Brands Tab */}
+      {tab === "brands" && (
+        <div className="space-y-6">
+          <div className="flex items-center justify-between">
+            <button onClick={() => setEditingBrand({ name_ar: "", name_en: "", image: "" })} className="btn-primary gap-2">
+              <Plus className="w-4 h-4" /> {lang === "ar" ? "إضافة ماركة" : "Add Brand"}
+            </button>
+          </div>
+          <div className="glass-strong rounded-2xl overflow-hidden">
+            <table className="data-table">
+              <thead><tr>
+                <th>{lang === "ar" ? "الماركة" : "Brand"}</th>
+                <th>{lang === "ar" ? "الاسم (EN)" : "Name (EN)"}</th>
+                <th className="text-end">{lang === "ar" ? "إجراءات" : "Actions"}</th>
+              </tr></thead>
+              <tbody>
+                {brands.map((b) => (
+                  <tr key={b.id}>
+                    <td>
+                      <div className="flex items-center gap-3">
+                        {b.image && <img src={b.image} className="w-8 h-8 rounded object-contain bg-white/5" alt="" />}
+                        <span className="font-bold">{b.name_ar}</span>
+                      </div>
+                    </td>
+                    <td><span className="text-sm text-muted-foreground">{b.name_en}</span></td>
+                    <td>
+                      <div className="flex items-center gap-2 justify-end">
+                        <button onClick={() => setEditingBrand(b)} className="icon-btn"><Edit2 className="w-3.5 h-3.5" /></button>
+                        <button onClick={() => deleteBrand(b.id)} className="icon-btn hover:!bg-destructive/20 hover:!text-destructive hover:!border-destructive/30"><Trash2 className="w-3.5 h-3.5" /></button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Brand Modal */}
+      {editingBrand && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md">
+          <div className="glass-strong rounded-3xl p-8 max-w-lg w-full shadow-2xl space-y-6">
+            <h3 className="font-bold text-xl">{editingBrand.id ? (lang === "ar" ? "تعديل ماركة" : "Edit Brand") : (lang === "ar" ? "إضافة ماركة" : "Add Brand")}</h3>
+            <div className="space-y-4">
+              <Field label={lang === "ar" ? "الاسم بالعربي" : "Name (AR)"} value={editingBrand.name_ar} onChange={(v) => setEditingBrand({ ...editingBrand, name_ar: v })} />
+              <Field label={lang === "ar" ? "الاسم بالإنجليزي" : "Name (EN)"} value={editingBrand.name_en} onChange={(v) => setEditingBrand({ ...editingBrand, name_en: v })} />
+              <Field label={lang === "ar" ? "رابط الصورة" : "Image URL"} value={editingBrand.image || ""} onChange={(v) => setEditingBrand({ ...editingBrand, image: v })} />
+            </div>
+            <div className="flex gap-3 pt-2">
+              <button onClick={() => setEditingBrand(null)} className="btn-ghost flex-1">{t("cancel")}</button>
+              <button onClick={saveBrand} disabled={busy} className="btn-primary flex-1">{busy ? "..." : t("save")}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Settings Tab */}
+      {tab === "settings" && (
+        <div className="max-w-md mx-auto">
+          <div className="glass-strong rounded-3xl p-8 space-y-6">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center">
+                <Lock className="w-5 h-5 text-primary-glow" />
+              </div>
+              <h3 className="font-bold text-lg">{lang === "ar" ? "تغيير كلمة السر" : "Change Password"}</h3>
+            </div>
+            <div className="space-y-4">
+              <Field label={lang === "ar" ? "كلمة السر الجديدة" : "New Password"} type="password" value={newPassword} onChange={setNewPassword} />
+              <button onClick={changeAdminPassword} className="btn-primary w-full py-3">
+                {lang === "ar" ? "حفظ التغييرات" : "Save Changes"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </AdminLayout>
   );
 }
 
 function Field({ label, value, onChange, type = "text" }: { label: string; value: string; onChange: (v: string) => void; type?: string }) {
   return (
     <div>
-      <label className="text-xs text-muted-foreground">{label}</label>
-      <input type={type} value={value} onChange={(e) => onChange(e.target.value)}
-        className="w-full glass rounded-lg px-3 py-2 mt-1 bg-transparent outline-none focus:ring-2 focus:ring-primary" />
+      <label className="field-label">{label}</label>
+      <input type={type} value={value} onChange={(e) => onChange(e.target.value)} className="field-input" />
     </div>
   );
 }
@@ -287,10 +970,9 @@ function Field({ label, value, onChange, type = "text" }: { label: string; value
 function Select({ label, value, onChange, options }: { label: string; value: string; onChange: (v: string) => void; options: { value: string; label: string }[] }) {
   return (
     <div>
-      <label className="text-xs text-muted-foreground">{label}</label>
-      <select value={value} onChange={(e) => onChange(e.target.value)}
-        className="w-full glass rounded-lg px-3 py-2 mt-1 bg-transparent outline-none focus:ring-2 focus:ring-primary">
-        {options.map((o) => <option key={o.value} value={o.value} className="bg-background">{o.label}</option>)}
+      <label className="field-label">{label}</label>
+      <select value={value} onChange={(e) => onChange(e.target.value)} className="field-input cursor-pointer">
+        {options.map((o) => <option key={o.value} value={o.value} className="bg-[#0a051a]">{o.label}</option>)}
       </select>
     </div>
   );

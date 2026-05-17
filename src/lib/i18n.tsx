@@ -4,8 +4,8 @@ type Lang = "ar" | "en";
 type Dict = Record<string, { ar: string; en: string }>;
 
 const dict: Dict = {
-  brand: { ar: "Pavilion", en: "Pavilion" },
-  tagline: { ar: "متجر اللابتوبات وقطع الغيار", en: "Laptops & Spare Parts Store" },
+  brand: { ar: "PAVILION", en: "PAVILION" },
+  tagline: { ar: "متجر اللابتوبات وقطع الغيار الأصلية", en: "Genuine Laptops & Spare Parts" },
   home: { ar: "الرئيسية", en: "Home" },
   shop: { ar: "المتجر", en: "Shop" },
   categories: { ar: "الأقسام", en: "Categories" },
@@ -24,7 +24,7 @@ const dict: Dict = {
   clear: { ar: "مسح", en: "Clear" },
   no_results: { ar: "لا توجد نتائج", en: "No results" },
   hero_title: { ar: "أفضل اللابتوبات وقطع الغيار في بغداد", en: "Top Laptops & Spare Parts in Baghdad" },
-  hero_sub: { ar: "تصاميم زجاجية، أسعار منافسة، توصيل سريع", en: "Glass UI, sharp prices, fast delivery" },
+  hero_sub: { ar: "أسعار منافسة، توصيل سريع", en: "Sharp prices, fast delivery" },
   shop_now: { ar: "تسوق الآن", en: "Shop Now" },
   location: { ar: "بغداد - شارع الصناعة (مقابل الجامعة التكنولوجية)", en: "Baghdad - Al-Sina'a St. (Opposite Univ. of Technology)" },
   phone: { ar: "هاتف", en: "Phone" },

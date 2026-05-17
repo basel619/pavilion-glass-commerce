@@ -23,14 +23,20 @@ function Shop() {
     (async () => {
       const [p, b, c] = await Promise.all([
         supabase.from("products").select("*").order("created_at", { ascending: false }),
-        supabase.from("brands").select("id,name,parent_id").order("name"),
+        supabase.from("brands").select("id,name_ar,name_en,parent_id").order("name_en"),
         supabase.from("categories").select("id,name_ar,name_en").order("name_en"),
       ]);
-      const prods = (p.data ?? []) as Product[];
+      const prods = (p.data ?? []).map(x => ({
+        ...x,
+        regular_price: Number(x.regular_price) || 0,
+        sale_price: x.sale_price ? (Number(x.sale_price) || null) : null
+      })) as Product[];
       setProducts(prods);
       setBrands((b.data ?? []) as BrandOpt[]);
       setCats((c.data ?? []) as CatOpt[]);
-      const max = Math.max(5000000, ...prods.map((x) => x.regular_price));
+      
+      const prices = prods.map((x) => x.regular_price).filter(price => !isNaN(price) && price > 0);
+      const max = Math.max(5000000, ...prices);
       setMaxPrice(max);
       setFilters((f) => ({ ...f, price: [0, max] }));
     })();

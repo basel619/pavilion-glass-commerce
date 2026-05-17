@@ -2,13 +2,13 @@ import { useState } from "react";
 import { useCart } from "@/lib/cart";
 import { useI18n } from "@/lib/i18n";
 import { supabase } from "@/integrations/supabase/client";
-import { X, Trash2, Minus, Plus } from "lucide-react";
+import { ShoppingCart, X, Trash2, Minus, Plus } from "lucide-react";
 import { toast } from "sonner";
 
 export function CartDrawer({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { t, lang } = useI18n();
   const { items, setQty, remove, total, clear } = useCart();
-  const [form, setForm] = useState({ name: "", phone: "", address: "", source: "website", notes: "" });
+  const [form, setForm] = useState({ name: "", phone: "", address: "", notes: "" });
   const [submitting, setSubmitting] = useState(false);
 
   const submit = async () => {
@@ -18,21 +18,35 @@ export function CartDrawer({ open, onClose }: { open: boolean; onClose: () => vo
     }
     if (items.length === 0) return;
     setSubmitting(true);
-    const { error } = await supabase.from("orders").insert({
-      customer_name: form.name.trim().slice(0, 200),
-      customer_phone: form.phone.trim().slice(0, 30),
-      customer_address: form.address.trim().slice(0, 500) || null,
-      source: form.source,
-      notes: form.notes.trim().slice(0, 500) || null,
-      items: items.map((i) => ({ id: i.id, name: i.name, price: i.price, qty: i.qty })),
-      total: total(),
-    });
-    setSubmitting(false);
-    if (error) { toast.error(error.message); return; }
-    toast.success(t("order_success"));
-    clear();
-    setForm({ name: "", phone: "", address: "", source: "website", notes: "" });
-    onClose();
+    try {
+      const payload = {
+        customer_name: form.name.trim().slice(0, 200),
+        customer_phone: form.phone.trim().slice(0, 30),
+        customer_address: form.address.trim().slice(0, 500) || null,
+        notes: form.notes.trim().slice(0, 500) || null,
+        items: items.map((i) => ({ id: i.id, name: i.name, price: i.price, qty: i.qty, image: i.image })),
+        total: total(),
+      };
+      console.log("Cart Checkout Payload:", payload);
+      const { data, error } = await supabase.from("orders").insert([payload]).select();
+      
+      if (error) { 
+        console.error("Cart Checkout Error:", error);
+        toast.error(lang === "ar" ? `فشل الطلب: ${error.message}` : `Order failed: ${error.message}`); 
+        return; 
+      }
+      
+      console.log("Cart Checkout Success:", data);
+      toast.success(t("order_success"));
+      clear();
+      setForm({ name: "", phone: "", address: "", notes: "" });
+      onClose();
+    } catch (err: any) {
+      console.error("Cart Checkout Fatal Error:", err);
+      toast.error(err.message);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   if (!open) return null;
@@ -75,14 +89,8 @@ export function CartDrawer({ open, onClose }: { open: boolean; onClose: () => vo
                 className="w-full glass rounded-lg px-3 py-2 text-sm bg-transparent outline-none focus:ring-2 focus:ring-primary" />
               <input value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} placeholder={t("address")}
                 className="w-full glass rounded-lg px-3 py-2 text-sm bg-transparent outline-none focus:ring-2 focus:ring-primary" />
-              <select value={form.source} onChange={(e) => setForm({ ...form, source: e.target.value })}
-                className="w-full glass rounded-lg px-3 py-2 text-sm bg-transparent outline-none focus:ring-2 focus:ring-primary">
-                <option value="website" className="bg-background">Website</option>
-                <option value="whatsapp" className="bg-background">WhatsApp</option>
-                <option value="facebook" className="bg-background">Facebook</option>
-                <option value="instagram" className="bg-background">Instagram</option>
-                <option value="tiktok" className="bg-background">TikTok</option>
-              </select>
+              <textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} placeholder={t("notes")}
+                className="w-full glass rounded-lg px-3 py-2 text-sm bg-transparent outline-none focus:ring-2 focus:ring-primary h-20" />
             </div>
             <div className="flex items-center justify-between text-sm">
               <span className="text-muted-foreground">{t("total")}</span>

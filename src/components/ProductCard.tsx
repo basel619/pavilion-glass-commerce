@@ -1,6 +1,9 @@
-import { Star, ShoppingCart, MessageCircle, Facebook, Instagram } from "lucide-react";
+import { Link } from "@tanstack/react-router";
+import { Star, ShoppingCart, MessageCircle, Eye } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import { useCart } from "@/lib/cart";
+import { useAddToCartModal } from "@/lib/add-to-cart-modal";
+import { useBuyNow } from "@/lib/buy-now-modal";
 import { toast } from "sonner";
 
 export interface Product {
@@ -24,72 +27,99 @@ const PHONE = "9647712715130";
 export function ProductCard({ product }: { product: Product }) {
   const { lang, t } = useI18n();
   const add = useCart((s) => s.add);
+  const cartModal = useAddToCartModal();
   const name = lang === "ar" ? product.name_ar : product.name_en;
   const price = product.sale_price ?? product.regular_price;
   const hasSale = product.sale_price && product.sale_price < product.regular_price;
+  const discount = hasSale ? Math.round(((product.regular_price - price) / product.regular_price) * 100) : 0;
 
   const waText = encodeURIComponent(`${lang === "ar" ? "أرغب بشراء" : "I want to buy"}: ${name} (${product.sku ?? ""})`);
-  const productUrl = typeof window !== "undefined" ? `${window.location.origin}/product/${product.id}` : "";
 
   return (
-    <div className="glass rounded-2xl overflow-hidden group hover:glass-strong transition-all duration-300 hover:-translate-y-1 hover:glow-primary flex flex-col">
-      <div className="relative aspect-[4/3] overflow-hidden bg-gradient-to-br from-primary/10 to-accent/10">
+    <div className="product-card group">
+      {/* Image */}
+      <Link to="/product/$id" params={{ id: product.id }} className="relative aspect-[4/3] overflow-hidden bg-gradient-to-br from-primary/10 via-accent/5 to-transparent block cursor-pointer">
         {product.image ? (
           <img src={product.image} alt={name} loading="lazy"
-            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 ease-out" />
         ) : (
-          <div className="w-full h-full flex items-center justify-center text-muted-foreground">No image</div>
-        )}
-        {hasSale && (
-          <div className="absolute top-3 start-3 bg-destructive/90 backdrop-blur-md text-destructive-foreground text-xs font-bold px-2 py-1 rounded-full">
-            {Math.round(((product.regular_price - price) / product.regular_price) * 100)}%-
+          <div className="w-full h-full flex items-center justify-center flex-col gap-2 text-muted-foreground">
+            <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
+              <ShoppingCart className="w-6 h-6 text-primary/50" />
+            </div>
+            <span className="text-xs">No image</span>
           </div>
         )}
-        <div className="absolute top-3 end-3 glass rounded-full px-2 py-1 flex items-center gap-1 text-xs">
-          <Star className="w-3 h-3 fill-primary-glow text-primary-glow" />
-          {product.rating}
+
+        {/* Overlay on hover */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-3">
+          <span className="text-white text-xs font-semibold flex items-center gap-1.5">
+            <Eye className="w-3.5 h-3.5" /> {lang === "ar" ? "عرض التفاصيل" : "View Details"}
+          </span>
         </div>
-      </div>
 
+        {/* Badges */}
+        {hasSale && (
+          <div className="absolute top-2.5 start-2.5 badge badge-danger !text-[11px] !py-1 !px-2 shadow-lg">
+            -{discount}%
+          </div>
+        )}
+        {!product.in_stock && (
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center">
+            <span className="badge badge-danger !text-xs !py-1.5 !px-3">{t("out_of_stock")}</span>
+          </div>
+        )}
+        <div className="absolute top-2.5 end-2.5 glass rounded-full px-2 py-1 flex items-center gap-1 text-xs font-bold">
+          <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
+          <span>{product.rating || "5.0"}</span>
+        </div>
+      </Link>
+
+      {/* Body */}
       <div className="p-4 flex-1 flex flex-col gap-3">
-        <h3 className="font-semibold line-clamp-2 leading-tight">{name}</h3>
+        <Link to="/product/$id" params={{ id: product.id }} className="cursor-pointer">
+          <h3 className="font-bold text-sm leading-snug line-clamp-2 hover:text-primary-glow transition-colors duration-200">{name}</h3>
+        </Link>
 
-        <div className="flex items-baseline gap-2">
-          <span className="text-lg font-bold gradient-text">{price.toLocaleString()}</span>
-          <span className="text-xs text-muted-foreground">{t("iqd")}</span>
+        {/* Price */}
+        <div className="flex items-baseline gap-2 mt-auto">
+          <span className="text-xl font-extrabold gradient-text">{price.toLocaleString()}</span>
+          <span className="text-xs text-muted-foreground font-medium">{t("iqd")}</span>
           {hasSale && (
-            <span className="text-xs text-muted-foreground line-through ms-auto">
+            <span className="text-xs text-muted-foreground line-through ms-auto opacity-60">
               {product.regular_price.toLocaleString()}
             </span>
           )}
         </div>
 
-        <div className="flex items-center gap-1.5 mt-auto">
-          <a href={`https://wa.me/${PHONE}?text=${waText}`} target="_blank" rel="noopener noreferrer"
-            title="WhatsApp"
-            className="w-9 h-9 rounded-lg glass flex items-center justify-center hover:bg-emerald-500/20 hover:text-emerald-400 transition">
-            <MessageCircle className="w-4 h-4" />
-          </a>
-          <a href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(productUrl)}`} target="_blank" rel="noopener noreferrer"
-            title="Facebook"
-            className="w-9 h-9 rounded-lg glass flex items-center justify-center hover:bg-blue-500/20 hover:text-blue-400 transition">
-            <Facebook className="w-4 h-4" />
-          </a>
-          <a href={`https://www.instagram.com/`} target="_blank" rel="noopener noreferrer"
-            title="Instagram"
-            className="w-9 h-9 rounded-lg glass flex items-center justify-center hover:bg-pink-500/20 hover:text-pink-400 transition">
-            <Instagram className="w-4 h-4" />
+        {/* Actions */}
+        <div className="flex items-center gap-2 pt-2 border-t border-white/5">
+          <a
+            href={`https://wa.me/${PHONE}?text=${waText}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="icon-btn !w-11 !h-11 hover:bg-[#25D366]/20 hover:!text-[#25D366] hover:!border-[#25D366]/30 transition-all shadow-lg"
+          >
+            <MessageCircle className="w-5 h-5" />
           </a>
 
           <button
             onClick={() => {
               add({ id: product.id, name, price, image: product.image ?? undefined });
-              toast.success(lang === "ar" ? "تمت الإضافة للسلة" : "Added to cart");
+              cartModal.open(name);
             }}
             disabled={!product.in_stock}
-            className="ms-auto h-9 px-3 rounded-lg bg-gradient-to-r from-primary to-primary-glow text-primary-foreground text-sm font-semibold flex items-center gap-1.5 hover:opacity-90 transition disabled:opacity-50">
-            <ShoppingCart className="w-4 h-4" />
-            {t("add_to_cart")}
+            className="icon-btn !w-11 !h-11 hover:bg-primary/20 hover:!text-primary-glow hover:!border-primary/30 transition-all shadow-lg"
+          >
+            <ShoppingCart className="w-5 h-5" />
+          </button>
+
+          <button
+            onClick={() => useBuyNow.getState().open(product)}
+            disabled={!product.in_stock}
+            className="btn-primary flex-1 !h-11 !text-[11px] !rounded-xl font-black uppercase tracking-widest glow-primary-sm hover:glow-primary active:scale-95 disabled:opacity-40 shadow-xl"
+          >
+            {t("buy_now")}
           </button>
         </div>
       </div>

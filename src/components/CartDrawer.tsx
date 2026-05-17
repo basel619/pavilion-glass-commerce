@@ -83,13 +83,13 @@ export function CartDrawer({ open, onClose }: { open: boolean; onClose: () => vo
         {items.length > 0 && (
           <div className="p-4 border-t border-glass-border space-y-3">
             <div className="space-y-2">
-              <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder={t("name")}
+              <input id="cart-name" name="customer_name" type="text" autoComplete="name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder={t("name")}
                 className="w-full glass rounded-lg px-3 py-2 text-sm bg-transparent outline-none focus:ring-2 focus:ring-primary" />
-              <input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder={t("phone")}
+              <input id="cart-phone" name="customer_phone" type="tel" autoComplete="tel" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder={t("phone")}
                 className="w-full glass rounded-lg px-3 py-2 text-sm bg-transparent outline-none focus:ring-2 focus:ring-primary" />
-              <input value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} placeholder={t("address")}
+              <input id="cart-address" name="customer_address" type="text" autoComplete="street-address" value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} placeholder={t("address")}
                 className="w-full glass rounded-lg px-3 py-2 text-sm bg-transparent outline-none focus:ring-2 focus:ring-primary" />
-              <textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} placeholder={t("notes")}
+              <textarea id="cart-notes" name="customer_notes" autoComplete="off" value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} placeholder={t("notes")}
                 className="w-full glass rounded-lg px-3 py-2 text-sm bg-transparent outline-none focus:ring-2 focus:ring-primary h-20" />
             </div>
             <div className="flex items-center justify-between text-sm">

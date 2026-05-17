@@ -362,15 +362,15 @@ function AdminDashboard() {
                 <label className="text-xs font-bold text-muted-foreground uppercase tracking-widest ps-1">Email</label>
                 <div className="relative group">
                   <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
-                  <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="admin@pavilion.com"
+                  <input id="admin-login-email" name="email" autoComplete="email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="admin@pavilion.com"
                     className="w-full h-12 bg-white/5 border border-white/10 rounded-xl ps-10 pe-4 text-sm outline-none focus:border-primary/50 focus:ring-4 focus:ring-primary/10 transition-all" />
                 </div>
               </div>
               <div className="space-y-2">
-                <label className="text-xs font-bold text-muted-foreground uppercase tracking-widest ps-1">Password</label>
+                <label htmlFor="admin-login-password" className="text-xs font-bold text-muted-foreground uppercase tracking-widest ps-1">Password</label>
                 <div className="relative group">
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
-                  <input type="password" required value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••"
+                  <input id="admin-login-password" name="password" autoComplete="current-password" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••"
                     className="w-full h-12 bg-white/5 border border-white/10 rounded-xl ps-10 pe-4 text-sm outline-none focus:border-primary/50 focus:ring-4 focus:ring-primary/10 transition-all" />
                 </div>
               </div>
@@ -685,12 +685,12 @@ function AdminDashboard() {
               <button onClick={() => setEditingCategory(null)} className="icon-btn"><X className="w-4 h-4" /></button>
             </div>
             <div className="space-y-4">
-              <Field label={lang === "ar" ? "الاسم (ع)" : "Name (AR)"} value={editingCategory.name_ar} onChange={(v) => setEditingCategory({ ...editingCategory, name_ar: v })} />
-              <Field label={lang === "ar" ? "الاسم (EN)" : "Name (EN)"} value={editingCategory.name_en} onChange={(v) => setEditingCategory({ ...editingCategory, name_en: v })} />
+              <Field label={lang === "ar" ? "الاسم (ع)" : "Name (AR)"} name="category-name-ar" value={editingCategory.name_ar} onChange={(v) => setEditingCategory({ ...editingCategory, name_ar: v })} />
+              <Field label={lang === "ar" ? "الاسم (EN)" : "Name (EN)"} name="category-name-en" value={editingCategory.name_en} onChange={(v) => setEditingCategory({ ...editingCategory, name_en: v })} />
               <div className="space-y-1">
-                <label className="field-label">{lang === "ar" ? "الصورة" : "Image"}</label>
+                <label htmlFor="admin-field-category-image" className="field-label">{lang === "ar" ? "الصورة" : "Image"}</label>
                 <div className="flex gap-2">
-                  <input type="text" value={editingCategory.image ?? ""} onChange={(e) => setEditingCategory({ ...editingCategory, image: e.target.value })} placeholder="URL" className="field-input flex-1" />
+                  <input id="admin-field-category-image" name="category-image" autoComplete="off" type="text" value={editingCategory.image ?? ""} onChange={(e) => setEditingCategory({ ...editingCategory, image: e.target.value })} placeholder="URL" className="field-input flex-1" />
                   <label className="icon-btn shrink-0 cursor-pointer">
                     <Plus className="w-4 h-4" />
                     <input type="file" className="hidden" onChange={async (e) => {
@@ -728,13 +728,13 @@ function AdminDashboard() {
             
             <div className="grid sm:grid-cols-2 gap-5 text-sm">
               <div className="space-y-4">
-                <Field label={lang === "ar" ? "الاسم (ع)" : "Name (AR)"} value={editing.name_ar} onChange={(v) => setEditing({ ...editing, name_ar: v })} />
-                <Field label={lang === "ar" ? "الاسم (EN)" : "Name (EN)"} value={editing.name_en} onChange={(v) => setEditing({ ...editing, name_en: v })} />
-                <Field label="SKU" value={editing.sku ?? ""} onChange={(v) => setEditing({ ...editing, sku: v })} />
+                <Field label={lang === "ar" ? "الاسم (ع)" : "Name (AR)"} name="product-name-ar" value={editing.name_ar} onChange={(v) => setEditing({ ...editing, name_ar: v })} />
+                <Field label={lang === "ar" ? "الاسم (EN)" : "Name (EN)"} name="product-name-en" value={editing.name_en} onChange={(v) => setEditing({ ...editing, name_en: v })} />
+                <Field label="SKU" name="product-sku" value={editing.sku ?? ""} onChange={(v) => setEditing({ ...editing, sku: v })} />
                 <div className="space-y-1">
-                  <label className="field-label">{lang === "ar" ? "الصورة" : "Image"}</label>
+                  <label htmlFor="admin-field-product-image" className="field-label">{lang === "ar" ? "الصورة" : "Image"}</label>
                   <div className="flex gap-2">
-                    <input type="text" value={editing.image ?? ""} onChange={(e) => setEditing({ ...editing, image: e.target.value })} placeholder="URL" className="field-input flex-1" />
+                    <input id="admin-field-product-image" name="product-image" autoComplete="off" type="text" value={editing.image ?? ""} onChange={(e) => setEditing({ ...editing, image: e.target.value })} placeholder="URL" className="field-input flex-1" />
                     <label className="icon-btn shrink-0 cursor-pointer">
                       <Plus className="w-4 h-4" />
                       <input type="file" className="hidden" onChange={async (e) => {
@@ -754,10 +754,10 @@ function AdminDashboard() {
 
               <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
-                  <Field label={lang === "ar" ? "السعر العادي" : "Regular Price"} type="number" value={String(editing.regular_price)} onChange={(v) => setEditing({ ...editing, regular_price: Number(v) })} />
-                  <Field label={lang === "ar" ? "سعر التخفيض" : "Sale Price"} type="number" value={String(editing.sale_price ?? "")} onChange={(v) => setEditing({ ...editing, sale_price: v ? Number(v) : null })} />
-                  <Field label={lang === "ar" ? "المخزون" : "Stock"} type="number" value={String(editing.stock)} onChange={(v) => setEditing({ ...editing, stock: Number(v), in_stock: Number(v) > 0 })} />
-                  <Field label={lang === "ar" ? "التقييم" : "Rating"} type="number" value={String(editing.rating ?? 5)} onChange={(v) => setEditing({ ...editing, rating: Number(v) })} />
+                  <Field label={lang === "ar" ? "السعر العادي" : "Regular Price"} name="product-regular-price" type="number" value={String(editing.regular_price)} onChange={(v) => setEditing({ ...editing, regular_price: Number(v) })} />
+                  <Field label={lang === "ar" ? "سعر التخفيض" : "Sale Price"} name="product-sale-price" type="number" value={String(editing.sale_price ?? "")} onChange={(v) => setEditing({ ...editing, sale_price: v ? Number(v) : null })} />
+                  <Field label={lang === "ar" ? "المخزون" : "Stock"} name="product-stock" type="number" value={String(editing.stock)} onChange={(v) => setEditing({ ...editing, stock: Number(v), in_stock: Number(v) > 0 })} />
+                  <Field label={lang === "ar" ? "التقييم" : "Rating"} name="product-rating" type="number" value={String(editing.rating ?? 5)} onChange={(v) => setEditing({ ...editing, rating: Number(v) })} />
                 </div>
                 <Select label={lang === "ar" ? "القسم" : "Category"} value={editing.category_id ?? ""} onChange={(v) => setEditing({ ...editing, category_id: v || null })}
                     options={[{ value: "", label: "—" }, ...cats.map((c) => ({ value: c.id, label: lang === "ar" ? c.name_ar : c.name_en }))]} />
@@ -767,13 +767,13 @@ function AdminDashboard() {
               
               <div className="sm:col-span-2 space-y-4 pt-2">
                 <div className="space-y-1">
-                  <label className="field-label">{lang === "ar" ? "الوصف (ع)" : "Description (AR)"}</label>
-                  <textarea value={editing.description_ar ?? ""} onChange={(e) => setEditing({ ...editing, description_ar: e.target.value })}
+                  <label htmlFor="admin-field-product-desc-ar" className="field-label">{lang === "ar" ? "الوصف (ع)" : "Description (AR)"}</label>
+                  <textarea id="admin-field-product-desc-ar" name="product-desc-ar" autoComplete="off" value={editing.description_ar ?? ""} onChange={(e) => setEditing({ ...editing, description_ar: e.target.value })}
                     className="field-input !h-auto py-3 min-h-[100px] custom-scrollbar" />
                 </div>
                 <div className="space-y-1">
-                  <label className="field-label">{lang === "ar" ? "الوصف (EN)" : "Description (EN)"}</label>
-                  <textarea value={editing.description_en ?? ""} onChange={(e) => setEditing({ ...editing, description_en: e.target.value })}
+                  <label htmlFor="admin-field-product-desc-en" className="field-label">{lang === "ar" ? "الوصف (EN)" : "Description (EN)"}</label>
+                  <textarea id="admin-field-product-desc-en" name="product-desc-en" autoComplete="off" value={editing.description_en ?? ""} onChange={(e) => setEditing({ ...editing, description_en: e.target.value })}
                     className="field-input !h-auto py-3 min-h-[100px] custom-scrollbar" />
                 </div>
               </div>
@@ -923,9 +923,9 @@ function AdminDashboard() {
           <div className="glass-strong rounded-3xl p-8 max-w-lg w-full shadow-2xl space-y-6">
             <h3 className="font-bold text-xl">{editingBrand.id ? (lang === "ar" ? "تعديل ماركة" : "Edit Brand") : (lang === "ar" ? "إضافة ماركة" : "Add Brand")}</h3>
             <div className="space-y-4">
-              <Field label={lang === "ar" ? "الاسم بالعربي" : "Name (AR)"} value={editingBrand.name_ar} onChange={(v) => setEditingBrand({ ...editingBrand, name_ar: v })} />
-              <Field label={lang === "ar" ? "الاسم بالإنجليزي" : "Name (EN)"} value={editingBrand.name_en} onChange={(v) => setEditingBrand({ ...editingBrand, name_en: v })} />
-              <Field label={lang === "ar" ? "رابط الصورة" : "Image URL"} value={editingBrand.image || ""} onChange={(v) => setEditingBrand({ ...editingBrand, image: v })} />
+              <Field label={lang === "ar" ? "الاسم بالعربي" : "Name (AR)"} name="brand-name-ar" value={editingBrand.name_ar} onChange={(v) => setEditingBrand({ ...editingBrand, name_ar: v })} />
+              <Field label={lang === "ar" ? "الاسم بالإنجليزي" : "Name (EN)"} name="brand-name-en" value={editingBrand.name_en} onChange={(v) => setEditingBrand({ ...editingBrand, name_en: v })} />
+              <Field label={lang === "ar" ? "رابط الصورة" : "Image URL"} name="brand-image" value={editingBrand.image || ""} onChange={(v) => setEditingBrand({ ...editingBrand, image: v })} />
             </div>
             <div className="flex gap-3 pt-2">
               <button onClick={() => setEditingBrand(null)} className="btn-ghost flex-1">{t("cancel")}</button>
@@ -946,7 +946,7 @@ function AdminDashboard() {
               <h3 className="font-bold text-lg">{lang === "ar" ? "تغيير كلمة السر" : "Change Password"}</h3>
             </div>
             <div className="space-y-4">
-              <Field label={lang === "ar" ? "كلمة السر الجديدة" : "New Password"} type="password" value={newPassword} onChange={setNewPassword} />
+              <Field label={lang === "ar" ? "كلمة السر الجديدة" : "New Password"} name="new-password" type="password" value={newPassword} onChange={setNewPassword} />
               <button onClick={changeAdminPassword} className="btn-primary w-full py-3">
                 {lang === "ar" ? "حفظ التغييرات" : "Save Changes"}
               </button>
@@ -958,11 +958,12 @@ function AdminDashboard() {
   );
 }
 
-function Field({ label, value, onChange, type = "text" }: { label: string; value: string; onChange: (v: string) => void; type?: string }) {
+function Field({ label, value, onChange, type = "text", name, autoComplete = "off" }: { label: string; value: string; onChange: (v: string) => void; type?: string; name?: string; autoComplete?: string }) {
+  const id = name ? `admin-field-${name}` : undefined;
   return (
     <div>
-      <label className="field-label">{label}</label>
-      <input type={type} value={value} onChange={(e) => onChange(e.target.value)} className="field-input" />
+      <label htmlFor={id} className="field-label">{label}</label>
+      <input id={id} name={name} autoComplete={autoComplete} type={type} value={value} onChange={(e) => onChange(e.target.value)} className="field-input" />
     </div>
   );
 }

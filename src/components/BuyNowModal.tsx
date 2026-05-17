@@ -114,27 +114,27 @@ export function BuyNowModal() {
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-white/40 ps-1">{t("name")}</label>
-                  <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} 
+                  <label htmlFor="buy-name" className="text-[10px] font-black uppercase tracking-widest text-white/40 ps-1">{t("name")}</label>
+                  <input id="buy-name" name="customer_name" type="text" autoComplete="name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} 
                          className="field-input !h-13 !rounded-2xl bg-white/5 border-white/10 focus:border-primary/50 focus:bg-white/10 transition-all" 
                          placeholder={lang === "ar" ? "اسمك الكامل" : "Full Name"} />
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-white/40 ps-1">{t("phone")}</label>
-                  <input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} 
+                  <label htmlFor="buy-phone" className="text-[10px] font-black uppercase tracking-widest text-white/40 ps-1">{t("phone")}</label>
+                  <input id="buy-phone" name="customer_phone" type="tel" autoComplete="tel" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} 
                          className="field-input !h-13 !rounded-2xl bg-white/5 border-white/10 focus:border-primary/50 focus:bg-white/10 transition-all" 
                          placeholder="07XX XXX XXXX" />
                 </div>
               </div>
               <div className="space-y-1.5">
-                <label className="text-[10px] font-black uppercase tracking-widest text-white/40 ps-1">{t("address")}</label>
-                <input value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} 
+                <label htmlFor="buy-address" className="text-[10px] font-black uppercase tracking-widest text-white/40 ps-1">{t("address")}</label>
+                <input id="buy-address" name="customer_address" type="text" autoComplete="street-address" value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} 
                        className="field-input !h-13 !rounded-2xl bg-white/5 border-white/10 focus:border-primary/50 focus:bg-white/10 transition-all" 
                        placeholder={lang === "ar" ? "المدينة، المنطقة..." : "City, District..."} />
               </div>
               <div className="space-y-1.5">
-                <label className="text-[10px] font-black uppercase tracking-widest text-white/40 ps-1">{t("notes")}</label>
-                <textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} 
+                <label htmlFor="buy-notes" className="text-[10px] font-black uppercase tracking-widest text-white/40 ps-1">{t("notes")}</label>
+                <textarea id="buy-notes" name="customer_notes" autoComplete="off" value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} 
                           className="field-input !h-24 !py-4 !rounded-2xl bg-white/5 border-white/10 focus:border-primary/50 focus:bg-white/10 transition-all custom-scrollbar" 
                           placeholder={lang === "ar" ? "أي ملاحظات إضافية..." : "Any extra notes..."} />
               </div>

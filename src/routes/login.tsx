@@ -37,9 +37,9 @@ function LoginPage() {
       <div className="max-w-md mx-auto mt-10">
         <form onSubmit={submit} className="glass-strong rounded-2xl p-6 space-y-4">
           <h1 className="text-2xl font-bold gradient-text">{mode === "login" ? t("login") : t("signup")}</h1>
-          <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder={t("email")}
+          <input id="customer-login-email" name="email" autoComplete="email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder={t("email")}
             className="w-full glass rounded-lg px-3 py-2.5 bg-transparent outline-none focus:ring-2 focus:ring-primary" />
-          <input type="password" required minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} placeholder={t("password")}
+          <input id="customer-login-password" name="password" autoComplete={mode === "login" ? "current-password" : "new-password"} type="password" required minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} placeholder={t("password")}
             className="w-full glass rounded-lg px-3 py-2.5 bg-transparent outline-none focus:ring-2 focus:ring-primary" />
           <button disabled={busy} className="w-full h-11 rounded-xl bg-gradient-to-r from-primary to-primary-glow text-primary-foreground font-semibold disabled:opacity-50">
             {mode === "login" ? t("login") : t("signup")}

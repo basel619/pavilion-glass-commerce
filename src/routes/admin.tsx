@@ -22,12 +22,14 @@ function AdminDashboard() {
   const { t, lang } = useI18n();
   const nav = useNavigate();
   const [isAuth, setIsAuth] = useState<boolean | null>(null);
-  const [tab, setTab] = useState<"overview" | "products" | "orders" | "categories" | "brands" | "settings">("overview");
+  const [tab, setTab] = useState<"overview" | "banners" | "products" | "orders" | "categories" | "brands" | "settings">("overview");
   const [stats, setStats] = useState({ visits: 0, orders: 0, revenue: 0, products: 0 });
   const [products, setProducts] = useState<Product[]>([]);
   const [orders, setOrders] = useState<any[]>([]);
   const [cats, setCats] = useState<any[]>([]);
   const [brands, setBrands] = useState<any[]>([]);
+  const [banners, setBanners] = useState<any[]>([]);
+  const [editingBanner, setEditingBanner] = useState<{ id?: string, title?: string, link?: string, image_url: string, active: boolean, order_index: number } | null>(null);
   const [editing, setEditing] = useState<Product | null>(null);
   const [editingCategory, setEditingCategory] = useState<{ id?: string, name_ar: string, name_en: string, image?: string } | null>(null);
   const [editingBrand, setEditingBrand] = useState<any | null>(null);
@@ -66,6 +68,7 @@ function AdminDashboard() {
       .on("postgres_changes", { event: "*", schema: "public", table: "products" }, () => loadAll())
       .on("postgres_changes", { event: "*", schema: "public", table: "categories" }, () => loadAll())
       .on("postgres_changes", { event: "*", schema: "public", table: "brands" }, () => loadAll())
+      .on("postgres_changes", { event: "*", schema: "public", table: "banners" }, () => loadAll())
       .subscribe();
 
     // Tab listener
@@ -139,17 +142,19 @@ function AdminDashboard() {
 
   const loadAll = async () => {
     try {
-      const [v, o, p, c, b] = await Promise.all([
+      const [v, o, p, c, b, bn] = await Promise.all([
         supabase.from("visits").select("id", { count: "exact", head: true }),
         supabase.from("orders").select("*").order("created_at", { ascending: false }),
         supabase.from("products").select("*").order("created_at", { ascending: false }),
         supabase.from("categories").select("*"),
         supabase.from("brands").select("*"),
+        supabase.from("banners").select("*").order("order_index", { ascending: true }),
       ]);
       setOrders(o.data ?? []);
       setProducts((p.data ?? []) as Product[]);
       setCats(c.data ?? []);
       setBrands(b.data ?? []);
+      setBanners(bn.data ?? []);
       const revenue = (o.data ?? []).reduce((s, x: any) => s + Number(x.total || 0), 0);
       setStats({ visits: v.count ?? 0, orders: (o.data ?? []).length, revenue, products: (p.data ?? []).length });
     } catch (err) {
@@ -158,13 +163,51 @@ function AdminDashboard() {
     }
   };
 
-  const uploadFile = async (file: File) => {
+  const uploadFile = async (file: File, bucket = "images") => {
     const ext = file.name.split(".").pop();
     const name = `${Date.now()}-${Math.random().toString(36).substring(2, 7)}.${ext}`;
-    const { data, error } = await supabase.storage.from("images").upload(name, file);
+    const { data, error } = await supabase.storage.from(bucket).upload(name, file);
     if (error) throw error;
-    const { data: { publicUrl } } = supabase.storage.from("images").getPublicUrl(name);
+    const { data: { publicUrl } } = supabase.storage.from(bucket).getPublicUrl(name);
     return publicUrl;
+  };
+
+  const saveBanner = async (bn: any) => {
+    setBusy(true);
+    try {
+      const payload = { ...bn };
+      const id = payload.id;
+      delete payload.id;
+      
+      const res = id
+        ? await supabase.from("banners").update(payload).eq("id", id)
+        : await supabase.from("banners").insert([payload]);
+        
+      if (res.error) throw res.error;
+      toast.success(lang === "ar" ? "تم حفظ البنر" : "Banner saved");
+      setEditingBanner(null);
+      await loadAll();
+    } catch (err: any) {
+      toast.error(lang === "ar" ? `فشل الحفظ: ${err.message}` : `Save failed: ${err.message}`);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const deleteBanner = async (id: string) => {
+    if (confirm(lang === "ar" ? "هل أنت متأكد من حذف هذا البنر؟" : "Are you sure you want to delete this banner?")) {
+      setBusy(true);
+      try {
+        const { error } = await supabase.from("banners").delete().eq("id", id);
+        if (error) throw error;
+        toast.success(lang === "ar" ? "تم حذف البنر" : "Banner deleted");
+        await loadAll();
+      } catch (err: any) {
+        toast.error(err.message);
+      } finally {
+        setBusy(false);
+      }
+    }
   };
 
   const saveProduct = async (p: Product) => {
@@ -623,6 +666,133 @@ function AdminDashboard() {
               )}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {/* Banners Tab */}
+      {tab === "banners" && (
+        <div className="space-y-4 animate-fade-in">
+          <button onClick={() => setEditingBanner({ title: "", link: "", image_url: "", active: true, order_index: 0 })} className="btn-primary gap-2">
+            <Plus className="w-4 h-4" /> {lang === "ar" ? "إضافة بنر متحرك" : "Add Animated Banner"}
+          </button>
+          <div className="glass-strong rounded-2xl overflow-hidden border border-white/10 shadow-2xl">
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>{lang === "ar" ? "الصورة والبنر" : "Banner & Details"}</th>
+                  <th>{lang === "ar" ? "العنوان" : "Title"}</th>
+                  <th>{lang === "ar" ? "الرابط" : "Link"}</th>
+                  <th>{lang === "ar" ? "الترتيب" : "Order"}</th>
+                  <th>{lang === "ar" ? "الحالة" : "Status"}</th>
+                  <th className="text-end">{lang === "ar" ? "إجراءات" : "Actions"}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {banners.map((b) => (
+                  <tr key={b.id}>
+                    <td>
+                      <div className="flex items-center gap-3">
+                        <div className="w-24 h-12 rounded-xl overflow-hidden bg-white/5 border border-white/10 shrink-0">
+                          {b.image_url ? (
+                            <img src={b.image_url} alt="" className="w-full h-full object-cover" />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-muted-foreground"><ImageIcon className="w-5 h-5 opacity-20" /></div>
+                          )}
+                        </div>
+                      </div>
+                    </td>
+                    <td><span className="font-semibold text-sm">{b.title || "—"}</span></td>
+                    <td>
+                      {b.link ? (
+                        <a href={b.link} target="_blank" rel="noreferrer" className="text-xs text-primary-glow hover:underline truncate max-w-[150px] inline-block">{b.link}</a>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">—</span>
+                      )}
+                    </td>
+                    <td><span className="text-sm font-semibold">{b.order_index}</span></td>
+                    <td>
+                      <span className={`badge ${b.active ? 'badge-success' : 'badge-danger'}`}>
+                        {b.active ? (lang === "ar" ? "نشط" : "Active") : (lang === "ar" ? "غير نشط" : "Inactive")}
+                      </span>
+                    </td>
+                    <td>
+                      <div className="flex items-center gap-1.5 justify-end">
+                        <button onClick={() => setEditingBanner(b)} className="icon-btn" title={t("edit")}>
+                          <Edit2 className="w-3.5 h-3.5" />
+                        </button>
+                        <button onClick={() => deleteBanner(b.id)} className="icon-btn hover:!bg-destructive/20 hover:!text-destructive hover:!border-destructive/30" title={t("delete")}>
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+                {banners.length === 0 && (
+                  <tr>
+                    <td colSpan={6}>
+                      <div className="py-16 text-center">
+                        <div className="text-4xl mb-2">📸</div>
+                        <p className="text-muted-foreground text-sm">{lang === "ar" ? "لا توجد بنرات بعد" : "No banners yet"}</p>
+                      </div>
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Banner Modal */}
+      {editingBanner && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-fade-in" onMouseDown={() => setEditingBanner(null)}>
+          <div className="glass-strong rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl animate-slide-up" onMouseDown={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="font-extrabold text-xl gradient-text">{editingBanner.id ? t("edit") : (lang === "ar" ? "إضافة بنر" : "Add Banner")}</h3>
+              <button onClick={() => setEditingBanner(null)} className="icon-btn"><X className="w-4 h-4" /></button>
+            </div>
+            <div className="space-y-4">
+              <Field label={lang === "ar" ? "العنوان" : "Title"} name="banner-title" value={editingBanner.title ?? ""} onChange={(v) => setEditingBanner({ ...editingBanner, title: v })} />
+              <Field label={lang === "ar" ? "الرابط (عند النقر)" : "Link (On click)"} name="banner-link" value={editingBanner.link ?? ""} onChange={(v) => setEditingBanner({ ...editingBanner, link: v })} />
+              
+              <div className="grid grid-cols-2 gap-4">
+                <Field label={lang === "ar" ? "ترتيب العرض" : "Order Index"} name="banner-order" type="number" value={String(editingBanner.order_index)} onChange={(v) => setEditingBanner({ ...editingBanner, order_index: Number(v) })} />
+                <div className="space-y-1">
+                  <label className="field-label">{lang === "ar" ? "الحالة" : "Status"}</label>
+                  <select value={editingBanner.active ? "true" : "false"} onChange={(e) => setEditingBanner({ ...editingBanner, active: e.target.value === "true" })} className="field-input cursor-pointer">
+                    <option value="true" className="bg-[#0a051a]">{lang === "ar" ? "نشط" : "Active"}</option>
+                    <option value="false" className="bg-[#0a051a]">{lang === "ar" ? "غير نشط" : "Inactive"}</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <label htmlFor="admin-field-banner-image" className="field-label">{lang === "ar" ? "صورة البنر" : "Banner Image"}</label>
+                <div className="flex gap-2">
+                  <input id="admin-field-banner-image" name="banner-image" autoComplete="off" type="text" value={editingBanner.image_url ?? ""} onChange={(e) => setEditingBanner({ ...editingBanner, image_url: e.target.value })} placeholder="URL" className="field-input flex-1" />
+                  <label className="icon-btn shrink-0 cursor-pointer">
+                    <Plus className="w-4 h-4" />
+                    <input type="file" className="hidden" onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        toast.promise(uploadFile(file, "banners").then(url => setEditingBanner({ ...editingBanner, image_url: url })), {
+                          loading: "Uploading to banners bucket...",
+                          success: "Uploaded!",
+                          error: "Upload failed"
+                        });
+                      }
+                    }} />
+                  </label>
+                </div>
+              </div>
+            </div>
+            <div className="flex gap-3 mt-8">
+              <button onClick={() => setEditingBanner(null)} className="btn-ghost flex-1">{t("cancel")}</button>
+              <button disabled={busy} onClick={() => saveBanner(editingBanner)} className="btn-primary flex-1">
+                {busy ? "..." : t("save")}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

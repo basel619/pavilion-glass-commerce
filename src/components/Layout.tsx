@@ -1,7 +1,8 @@
 import { ReactNode, useState, useEffect } from "react";
 import { Link, useLocation } from "@tanstack/react-router";
-import { ShoppingBag, ShoppingCart, Laptop, MapPin, Phone, Edit2, Trash2, Languages, Plus, Search, User, Menu, X, Mail } from "lucide-react";
+import { ShoppingBag, ShoppingCart, Laptop, MapPin, Phone, Edit2, Trash2, Languages, Plus, Search, User, Menu, X, Mail, Sun, Moon } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
+import { useCart } from "@/lib/cart";
 import { CartDrawer } from "./CartDrawer";
 import { AddToCartModal } from "./AddToCartModal";
 import { BuyNowModal } from "./BuyNowModal";
@@ -12,6 +13,23 @@ export function Layout({ children }: { children: ReactNode }) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const location = useLocation();
   const path = location.pathname;
+  const cartCount = useCart((s) => s.count());
+
+  const [theme, setTheme] = useState<"dark" | "light">(() => {
+    return (localStorage.getItem("theme") as "dark" | "light") || "dark";
+  });
+
+  useEffect(() => {
+    const root = document.documentElement;
+    if (theme === "light") {
+      root.classList.add("light");
+      root.classList.remove("dark");
+    } else {
+      root.classList.add("dark");
+      root.classList.remove("light");
+    }
+    localStorage.setItem("theme", theme);
+  }, [theme]);
 
   const nav = [
     { label: t("home"), to: "/" },
@@ -21,7 +39,7 @@ export function Layout({ children }: { children: ReactNode }) {
   ];
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#060312] text-foreground font-sans selection:bg-primary/30 selection:text-white" dir={dir}>
+    <div className="min-h-screen flex flex-col bg-background text-foreground font-sans selection:bg-primary/30 selection:text-white" dir={dir}>
       {/* ─── Header ────────────────────────────────── */}
       <header className="sticky top-4 z-50 mx-4 sm:mx-8">
         <div className="glass-strong rounded-[1.5rem] px-5 sm:px-8 py-3 flex items-center justify-between border border-white/5 shadow-2xl backdrop-blur-3xl">
@@ -72,13 +90,27 @@ export function Layout({ children }: { children: ReactNode }) {
               ))}
             </div>
 
+            {/* Theme Switch */}
+            <button
+              onClick={() => setTheme(theme === "light" ? "dark" : "light")}
+              className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center hover:bg-white/10 active:scale-95 transition-all text-foreground cursor-pointer shrink-0"
+              title={theme === "light" ? "Dark Mode" : "Light Mode"}
+            >
+              {theme === "light" ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5 text-primary-glow" />}
+            </button>
+
             <button
               onClick={() => setOpenCart(true)}
               className="relative group flex items-center gap-3 bg-gradient-to-r from-primary to-primary-glow p-1 pe-5 rounded-2xl shadow-xl hover:scale-105 active:scale-95 transition-all cursor-pointer"
               title={t("cart")}
             >
-              <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center backdrop-blur-md">
+              <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center backdrop-blur-md relative">
                 <ShoppingCart className="w-5 h-5 text-white" />
+                {cartCount > 0 && (
+                  <span className="absolute -top-1.5 -right-1.5 bg-destructive text-destructive-foreground text-[10px] w-5 h-5 rounded-full flex items-center justify-center font-black border-2 border-background animate-bounce">
+                    {cartCount}
+                  </span>
+                )}
               </div>
               <span className="text-[13px] font-black uppercase tracking-widest text-white hidden sm:block">{t("cart")}</span>
             </button>

@@ -14,7 +14,10 @@ import {
   Menu,
   X,
   Lock,
-  Bookmark
+  Bookmark,
+  Image as ImageIcon,
+  Sun,
+  Moon
 } from "lucide-react";
 import { ReactNode, useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -26,6 +29,22 @@ export function AdminLayout({ children }: { children?: ReactNode }) {
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [orderCount, setOrderCount] = useState(0);
   const [activeTab, setActiveTab] = useState("overview");
+
+  const [theme, setTheme] = useState<"dark" | "light">(() => {
+    return (localStorage.getItem("theme") as "dark" | "light") || "dark";
+  });
+
+  useEffect(() => {
+    const root = document.documentElement;
+    if (theme === "light") {
+      root.classList.add("light");
+      root.classList.remove("dark");
+    } else {
+      root.classList.add("dark");
+      root.classList.remove("light");
+    }
+    localStorage.setItem("theme", theme);
+  }, [theme]);
 
   useEffect(() => {
     supabase.from("orders").select("id", { count: "exact", head: true }).eq("status", "pending")
@@ -48,6 +67,7 @@ export function AdminLayout({ children }: { children?: ReactNode }) {
 
   const menuItems = [
     { id: "overview", label: lang === "ar" ? "نظرة عامة" : "Overview", icon: TrendingUp },
+    { id: "banners", label: lang === "ar" ? "البنرات المتحركة" : "Banners", icon: ImageIcon },
     { id: "products", label: lang === "ar" ? "المنتجات" : "Products", icon: Package },
     { id: "orders", label: lang === "ar" ? "الطلبات" : "Orders", icon: ShoppingBag, badge: orderCount },
     { id: "categories", label: lang === "ar" ? "الأقسام" : "Categories", icon: FolderOpen },
@@ -195,6 +215,15 @@ export function AdminLayout({ children }: { children?: ReactNode }) {
           </div>
 
           <div className="flex items-center gap-2">
+            {/* Theme Switch */}
+            <button
+              onClick={() => setTheme(theme === "light" ? "dark" : "light")}
+              className="icon-btn"
+              title={theme === "light" ? "Dark Mode" : "Light Mode"}
+            >
+              {theme === "light" ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4 text-primary-glow" />}
+            </button>
+
             {/* Bell */}
             <button className="icon-btn relative animate-pulse-ring" title={lang === "ar" ? "الإشعارات" : "Notifications"}>
               <Bell className="w-4 h-4" />

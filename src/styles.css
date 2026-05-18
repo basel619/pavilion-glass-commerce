@@ -70,7 +70,41 @@
   --shadow-soft: 0 10px 40px -15px oklch(0 0 0 / 0.6);
 }
 
+:root.light {
+  /* Soft Lavender Premium Light Mode */
+  --background: oklch(0.97 0.01 270);
+  --foreground: oklch(0.18 0.06 270);
+  --card: oklch(1.00 0.00 270);
+  --card-foreground: oklch(0.18 0.06 270);
+  --popover: oklch(0.99 0.01 270);
+  --popover-foreground: oklch(0.18 0.06 270);
+  --primary: oklch(0.55 0.18 280);
+  --primary-foreground: oklch(0.99 0.01 270);
+  --primary-glow: oklch(0.65 0.18 290);
+  --secondary: oklch(0.90 0.02 270);
+  --secondary-foreground: oklch(0.18 0.06 270);
+  --muted: oklch(0.93 0.01 270);
+  --muted-foreground: oklch(0.45 0.03 270);
+  --accent: oklch(0.58 0.18 295);
+  --accent-foreground: oklch(0.99 0.01 270);
+  --destructive: oklch(0.58 0.22 27);
+  --destructive-foreground: oklch(0.99 0.01 270);
+  --border: oklch(0.18 0.06 270 / 8%);
+  --input: oklch(0.18 0.06 270 / 5%);
+  --ring: oklch(0.55 0.18 280);
+  --glass: oklch(1 0 0 / 60%);
+  --glass-border: oklch(0.18 0.06 270 / 12%);
+
+  --gradient-bg: radial-gradient(ellipse at top, oklch(0.94 0.03 285) 0%, oklch(0.97 0.01 270) 55%, oklch(0.96 0.01 270) 100%);
+  --gradient-primary: linear-gradient(135deg, var(--primary), var(--primary-glow));
+  --gradient-card: linear-gradient(135deg, oklch(1 0 0 / 75%), oklch(1 0 0 / 45%));
+  --shadow-glow: 0 20px 60px -10px oklch(0.55 0.18 280 / 0.25);
+  --shadow-glow-sm: 0 8px 25px -5px oklch(0.55 0.18 280 / 0.18);
+  --shadow-soft: 0 10px 40px -15px oklch(0.18 0.06 270 / 0.08);
+}
+
 .dark { color-scheme: dark; }
+.light { color-scheme: light; }
 
 /* ─── Scrollbar ─────────────────────────────────────── */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
@@ -84,6 +118,7 @@
 @layer base {
   * { border-color: var(--color-border); box-sizing: border-box; }
   html { color-scheme: dark; }
+  html.light { color-scheme: light; }
   body {
     background: var(--gradient-bg);
     background-attachment: fixed;
@@ -102,6 +137,13 @@
       radial-gradient(circle at 85% 80%, oklch(0.65 0.2 295 / 0.16), transparent 45%);
     z-index: -1;
   }
+  :root.light body::before {
+    background:
+      radial-gradient(circle at 15% 20%, oklch(0.55 0.18 280 / 0.08), transparent 40%),
+      radial-gradient(circle at 85% 80%, oklch(0.58 0.18 295 / 0.06), transparent 45%);
+  }
+  :root.light ::-webkit-scrollbar-thumb { background: oklch(0 0 0 / 12%); }
+  :root.light ::-webkit-scrollbar-thumb:hover { background: oklch(0.55 0.18 280 / 0.5); }
   [dir="rtl"] body { font-family: "Cairo", "Tajawal", system-ui, sans-serif; }
 
   /* Custom cursor for interactive elements */

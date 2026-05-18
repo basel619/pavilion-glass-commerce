@@ -30,14 +30,26 @@ function Home() {
   const { t, lang, dir } = useI18n();
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
+  const [banners, setBanners] = useState<any[]>([]);
+  const [currentSlide, setCurrentSlide] = useState(0);
 
   useEffect(() => {
     supabase.from("products").select("*").order("created_at", { ascending: false }).limit(8)
       .then(({ data }) => setProducts((data ?? []) as Product[]));
     supabase.from("categories").select("*").limit(6)
       .then(({ data }) => setCategories(data ?? []));
+    supabase.from("banners").select("*").eq("active", true).order("order_index", { ascending: true })
+      .then(({ data }) => setBanners(data ?? []));
     supabase.from("visits").insert({ path: "/" });
   }, []);
+
+  useEffect(() => {
+    if (banners.length <= 1) return;
+    const timer = setInterval(() => {
+      setCurrentSlide((prev) => (prev + 1) % banners.length);
+    }, 5000);
+    return () => clearInterval(timer);
+  }, [banners]);
 
   const HeroArrowIcon = dir === "rtl" ? ArrowLeft : ArrowRightIcon;
   const CategoryArrowIcon = dir === "rtl" ? ChevronLeft : ChevronRightIcon;
@@ -53,76 +65,164 @@ function Home() {
 
   return (
     <Layout>
-      {/* ─── Hero Section ──────────────────────────────── */}
-      <section className="relative min-h-screen flex flex-col rounded-[2.5rem] overflow-hidden mb-12 shadow-2xl">
-        {/* Background Image with Cinematic Overlay */}
-        <div className="absolute inset-0 z-0">
-          <img 
-            src={heroLaptop} 
-            alt="PAVILION Premium" 
-            className="w-full h-full object-cover object-center scale-100 animate-subtle-zoom brightness-[0.75] contrast-[1.1]" 
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-[#060312] via-[#060312]/50 to-transparent" />
-          <div className="absolute inset-0 bg-black/30 backdrop-blur-[1px]" />
-          
-          {/* Decorative Glows */}
-          <div className="absolute top-1/4 -left-20 w-96 h-96 bg-primary/20 blur-[120px] rounded-full animate-pulse" />
-          <div className="absolute bottom-1/4 -right-20 w-96 h-96 bg-accent/20 blur-[120px] rounded-full animate-pulse delay-700" />
-        </div>
+      {/* ─── Hero Section / Dynamic Slider ──────────────────────────────── */}
+      {banners.length > 0 ? (
+        <section className="relative h-[65vh] sm:h-[80vh] w-full rounded-[2.5rem] overflow-hidden mb-12 shadow-2xl group border border-white/5 bg-[#060312]">
+          {/* Slides */}
+          {banners.map((slide, idx) => {
+            const isActive = idx === currentSlide;
+            return (
+              <div
+                key={slide.id}
+                className={`absolute inset-0 transition-all duration-1000 ease-in-out ${
+                  isActive ? "opacity-100 scale-100 pointer-events-auto" : "opacity-0 scale-105 pointer-events-none"
+                }`}
+              >
+                {/* Background Image with Cinematic Overlay */}
+                <img
+                  src={slide.image_url}
+                  alt={slide.title || "Banner"}
+                  className="w-full h-full object-cover object-center brightness-[0.75] contrast-[1.05]"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-[#060312] via-[#060312]/40 to-transparent" />
+                <div className="absolute inset-0 bg-black/25 backdrop-blur-[0.5px]" />
+                
+                {/* Content Overlay */}
+                {slide.title && (
+                  <div className="absolute bottom-16 sm:bottom-24 left-6 sm:left-12 right-6 sm:right-12 z-10 text-start max-w-3xl space-y-4">
+                    <h2 className="text-3xl sm:text-5xl lg:text-6xl font-black text-white leading-tight tracking-tight drop-shadow-[0_4px_12px_rgba(0,0,0,0.5)]">
+                      {slide.title}
+                    </h2>
+                    {slide.link && (
+                      <a
+                        href={slide.link}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="btn-primary !px-8 !py-3 text-xs tracking-wider inline-flex items-center gap-2 mt-2 hover:scale-105 transition-all glow-primary-sm"
+                      >
+                        {lang === "ar" ? "عرض المزيد" : "Learn More"} <HeroArrowIcon className="w-4 h-4" />
+                      </a>
+                    )}
+                  </div>
+                )}
+                {/* Clickable full slide if no title, but has a link */}
+                {!slide.title && slide.link && (
+                  <a
+                    href={slide.link}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="absolute inset-0 z-10"
+                  />
+                )}
+              </div>
+            );
+          })}
 
-        {/* Main Content Container - Flex Grow to push features bar to bottom */}
-        <div className="relative z-10 container mx-auto px-6 flex-1 flex flex-col items-center justify-center pt-24 pb-12 text-center">
+          {/* Slider Controls - Left / Right Arrows */}
+          {banners.length > 1 && (
+            <>
+              <button
+                onClick={() => setCurrentSlide((prev) => (prev - 1 + banners.length) % banners.length)}
+                className="absolute left-4 top-1/2 -translate-y-1/2 z-20 w-11 h-11 rounded-full glass flex items-center justify-center border border-white/10 hover:bg-white/15 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+              >
+                <ChevronLeft className="w-5 h-5 text-white" />
+              </button>
+              <button
+                onClick={() => setCurrentSlide((prev) => (prev + 1) % banners.length)}
+                className="absolute right-4 top-1/2 -translate-y-1/2 z-20 w-11 h-11 rounded-full glass flex items-center justify-center border border-white/10 hover:bg-white/15 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+              >
+                <ChevronRightIcon className="w-5 h-5 text-white" />
+              </button>
+            </>
+          )}
 
-          <div className="animate-slide-up space-y-4 max-w-5xl">
-            <h1 className="relative inline-block mb-2">
-              {/* Glow Behind */}
-              <span className="absolute inset-0 block text-5xl sm:text-[6rem] lg:text-[8rem] font-black leading-none tracking-[0.02em] uppercase text-primary/30 blur-2xl select-none" aria-hidden="true">
-                PAVILION
-              </span>
-              
-              {/* Main Text */}
-              <span className="block text-5xl sm:text-[6rem] lg:text-[8rem] font-black leading-none tracking-[0.02em] uppercase gradient-text drop-shadow-[0_20px_50px_rgba(0,0,0,0.8)] filter brightness-110">
-                PAVILION
-              </span>
-            </h1>
+          {/* Dots Indicator */}
+          {banners.length > 1 && (
+            <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20 flex gap-2.5">
+              {banners.map((_, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => setCurrentSlide(idx)}
+                  className={`h-2.5 rounded-full transition-all duration-300 ${
+                    idx === currentSlide ? "w-7 bg-primary" : "w-2.5 bg-white/30 hover:bg-white/50"
+                  }`}
+                />
+              ))}
+            </div>
+          )}
+        </section>
+      ) : (
+        /* Static Original Hero Section */
+        <section className="relative min-h-screen flex flex-col rounded-[2.5rem] overflow-hidden mb-12 shadow-2xl">
+          {/* Background Image with Cinematic Overlay */}
+          <div className="absolute inset-0 z-0">
+            <img 
+              src={heroLaptop} 
+              alt="PAVILION Premium" 
+              className="w-full h-full object-cover object-center scale-100 animate-subtle-zoom brightness-[0.75] contrast-[1.1]" 
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-[#060312] via-[#060312]/50 to-transparent" />
+            <div className="absolute inset-0 bg-black/30 backdrop-blur-[1px]" />
+            
+            {/* Decorative Glows */}
+            <div className="absolute top-1/4 -left-20 w-96 h-96 bg-primary/20 blur-[120px] rounded-full animate-pulse" />
+            <div className="absolute bottom-1/4 -right-20 w-96 h-96 bg-accent/20 blur-[120px] rounded-full animate-pulse delay-700" />
+          </div>
 
-            <div className="relative space-y-3">
-              <div className="h-1 w-16 bg-gradient-to-r from-transparent via-primary to-transparent mx-auto mb-4" />
-              <h2 className="text-lg sm:text-2xl font-black text-white tracking-tight max-w-3xl mx-auto drop-shadow-2xl">
-                {t("hero_title")}
-              </h2>
-              <p className="text-sm sm:text-base text-white/70 max-w-xl mx-auto font-bold leading-relaxed opacity-90 drop-shadow-lg">
-                {t("hero_sub")}
-              </p>
+          {/* Main Content Container - Flex Grow to push features bar to bottom */}
+          <div className="relative z-10 container mx-auto px-6 flex-1 flex flex-col items-center justify-center pt-24 pb-12 text-center">
+
+            <div className="animate-slide-up space-y-4 max-w-5xl">
+              <h1 className="relative inline-block mb-2">
+                {/* Glow Behind */}
+                <span className="absolute inset-0 block text-5xl sm:text-[6rem] lg:text-[8rem] font-black leading-none tracking-[0.02em] uppercase text-primary/30 blur-2xl select-none" aria-hidden="true">
+                  PAVILION
+                </span>
+                
+                {/* Main Text */}
+                <span className="block text-5xl sm:text-[6rem] lg:text-[8rem] font-black leading-none tracking-[0.02em] uppercase gradient-text drop-shadow-[0_20px_50px_rgba(0,0,0,0.8)] filter brightness-110">
+                  PAVILION
+                </span>
+              </h1>
+
+              <div className="relative space-y-3">
+                <div className="h-1 w-16 bg-gradient-to-r from-transparent via-primary to-transparent mx-auto mb-4" />
+                <h2 className="text-lg sm:text-2xl font-black text-white tracking-tight max-w-3xl mx-auto drop-shadow-2xl">
+                  {t("hero_title")}
+                </h2>
+                <p className="text-sm sm:text-base text-white/70 max-w-xl mx-auto font-bold leading-relaxed opacity-90 drop-shadow-lg">
+                  {t("hero_sub")}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mt-8 animate-fade-in delay-500">
+              <Link to="/shop" className="btn-primary !px-10 !py-4 text-base font-black tracking-[0.1em] uppercase glow-primary-sm hover:glow-primary hover:scale-105 active:scale-95 transition-all duration-300">
+                {t("shop_now")} <HeroArrowIcon className="w-5 h-5 ms-3" />
+              </Link>
+              <Link to="/contact" className="btn-ghost !px-10 !py-4 text-base font-black tracking-[0.1em] uppercase backdrop-blur-2xl border-white/20 hover:bg-white/15 hover:scale-105 active:scale-95 transition-all duration-300">
+                {t("contact")}
+              </Link>
             </div>
           </div>
 
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mt-8 animate-fade-in delay-500">
-            <Link to="/shop" className="btn-primary !px-10 !py-4 text-base font-black tracking-[0.1em] uppercase glow-primary-sm hover:glow-primary hover:scale-105 active:scale-95 transition-all duration-300">
-              {t("shop_now")} <HeroArrowIcon className="w-5 h-5 ms-3" />
-            </Link>
-            <Link to="/contact" className="btn-ghost !px-10 !py-4 text-base font-black tracking-[0.1em] uppercase backdrop-blur-2xl border-white/20 hover:bg-white/15 hover:scale-105 active:scale-95 transition-all duration-300">
-              {t("contact")}
-            </Link>
+          {/* Bottom Features Bar - Now as a flex child, naturally at bottom */}
+          <div className="relative z-20 glass-strong border-t border-white/10 py-8 mt-auto hidden lg:block">
+            <div className="container mx-auto px-6 flex justify-center gap-16">
+              {[
+                { icon: Cpu, label: lang === "ar" ? "أحدث المعالجات" : "Latest CPUs" },
+                { icon: Zap, label: lang === "ar" ? "أداء فائق" : "Extreme Performance" },
+                { icon: ShieldCheck, label: lang === "ar" ? "ضمان حقيقي" : "Genuine Warranty" },
+              ].map((item, i) => (
+                <div key={i} className="flex items-center gap-3 text-base font-black uppercase tracking-wider text-white group hover:text-primary-glow transition-all duration-500 cursor-default">
+                  <item.icon className="w-6 h-6 text-primary-glow animate-float group-hover:scale-110 transition-transform" />
+                  <span className="drop-shadow-lg">{item.label}</span>
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
-
-        {/* Bottom Features Bar - Now as a flex child, naturally at bottom */}
-        <div className="relative z-20 glass-strong border-t border-white/10 py-8 mt-auto hidden lg:block">
-          <div className="container mx-auto px-6 flex justify-center gap-16">
-            {[
-              { icon: Cpu, label: lang === "ar" ? "أحدث المعالجات" : "Latest CPUs" },
-              { icon: Zap, label: lang === "ar" ? "أداء فائق" : "Extreme Performance" },
-              { icon: ShieldCheck, label: lang === "ar" ? "ضمان حقيقي" : "Genuine Warranty" },
-            ].map((item, i) => (
-              <div key={i} className="flex items-center gap-3 text-base font-black uppercase tracking-wider text-white group hover:text-primary-glow transition-all duration-500 cursor-default">
-                <item.icon className="w-6 h-6 text-primary-glow animate-float group-hover:scale-110 transition-transform" />
-                <span className="drop-shadow-lg">{item.label}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* ─── Features ────────────────────────────────── */}
       <section className="grid sm:grid-cols-3 gap-4 mb-16">

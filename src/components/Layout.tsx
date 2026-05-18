@@ -41,12 +41,12 @@ export function Layout({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground font-sans selection:bg-primary/30 selection:text-white" dir={dir}>
       {/* ─── Header ────────────────────────────────── */}
-      <header className="sticky top-4 z-50 mx-4 sm:mx-8">
-        <div className="glass-strong rounded-[1.5rem] px-5 sm:px-8 py-3 flex items-center justify-between border border-white/5 shadow-2xl backdrop-blur-3xl">
+      <header className="sticky top-2 sm:top-4 z-50 mx-2 sm:mx-8">
+        <div className="glass-strong rounded-2xl sm:rounded-[1.5rem] px-3 sm:px-8 py-2.5 sm:py-3 flex items-center justify-between border border-white/5 shadow-2xl backdrop-blur-3xl">
           {/* Logo */}
           <Link to="/" className="flex items-center gap-3 shrink-0 group">
-            <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-primary to-primary-glow flex items-center justify-center glow-primary-sm group-hover:scale-110 transition-transform shadow-lg">
-              <Laptop className="w-6 h-6 text-primary-foreground" />
+            <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl sm:rounded-2xl bg-gradient-to-br from-primary to-primary-glow flex items-center justify-center glow-primary-sm group-hover:scale-110 transition-transform shadow-lg shrink-0">
+              <Laptop className="w-5 h-5 sm:w-6 sm:h-6 text-primary-foreground" />
             </div>
             <div className="hidden sm:block">
               <div className="font-black text-xl leading-tight gradient-text tracking-widest uppercase">{t("brand")}</div>
@@ -63,8 +63,9 @@ export function Layout({ children }: { children: ReactNode }) {
                   className={`px-5 py-2.5 rounded-xl text-[15px] font-black uppercase tracking-widest transition-all duration-300 cursor-pointer ${
                     active
                       ? "bg-primary/20 text-primary-glow border border-primary/20 shadow-lg shadow-primary/10"
-                      : "text-muted-foreground hover:text-foreground hover:bg-white/5"
-                  }`}>
+                      : "text-muted-foreground hover:bg-white/5 hover:text-foreground"
+                  }`}
+                >
                   {n.label}
                 </Link>
               );
@@ -72,14 +73,14 @@ export function Layout({ children }: { children: ReactNode }) {
           </nav>
 
           {/* Actions */}
-          <div className="flex items-center gap-3 ms-auto">
+          <div className="flex items-center gap-1.5 sm:gap-3 ms-auto">
             {/* Lang Switch */}
-            <div className="flex items-center gap-1.5 glass-strong rounded-xl p-1 border border-white/5">
+            <div className="flex items-center gap-1 glass-strong rounded-lg sm:rounded-xl p-0.5 border border-white/5 shrink-0">
               {['ar', 'en'].map((l) => (
                 <button
                   key={l}
                   onClick={() => setLang(l as any)}
-                  className={`px-6 py-3 rounded-xl text-sm font-black transition-all duration-300 uppercase tracking-widest ${
+                  className={`px-3 sm:px-6 py-1.5 sm:py-3 rounded-md sm:rounded-xl text-[11px] sm:text-sm font-black transition-all duration-300 uppercase tracking-widest ${
                     lang === l 
                     ? "bg-primary text-primary-foreground shadow-lg shadow-primary/40 scale-105" 
                     : "text-muted-foreground hover:bg-white/10"
@@ -93,21 +94,21 @@ export function Layout({ children }: { children: ReactNode }) {
             {/* Theme Switch */}
             <button
               onClick={() => setTheme(theme === "light" ? "dark" : "light")}
-              className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center hover:bg-white/10 active:scale-95 transition-all text-foreground cursor-pointer shrink-0"
+              className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-white/5 border border-white/10 flex items-center justify-center hover:bg-white/10 active:scale-95 transition-all text-foreground cursor-pointer shrink-0"
               title={theme === "light" ? "Dark Mode" : "Light Mode"}
             >
-              {theme === "light" ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5 text-primary-glow" />}
+              {theme === "light" ? <Moon className="w-4 h-4 sm:w-5 sm:h-5" /> : <Sun className="w-4 h-4 sm:w-5 sm:h-5 text-primary-glow" />}
             </button>
 
             <button
               onClick={() => setOpenCart(true)}
-              className="relative group flex items-center gap-3 bg-gradient-to-r from-primary to-primary-glow p-1 pe-5 rounded-2xl shadow-xl hover:scale-105 active:scale-95 transition-all cursor-pointer"
+              className="relative group flex items-center gap-2 sm:gap-3 bg-gradient-to-r from-primary to-primary-glow p-1 sm:pe-5 rounded-xl sm:rounded-2xl shadow-xl hover:scale-105 active:scale-95 transition-all cursor-pointer shrink-0"
               title={t("cart")}
             >
-              <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center backdrop-blur-md relative">
-                <ShoppingCart className="w-5 h-5 text-white" />
+              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-white/20 flex items-center justify-center backdrop-blur-md relative shrink-0">
+                <ShoppingCart className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
                 {cartCount > 0 && (
-                  <span className="absolute -top-1.5 -right-1.5 bg-destructive text-destructive-foreground text-[10px] w-5 h-5 rounded-full flex items-center justify-center font-black border-2 border-background animate-bounce">
+                  <span className="absolute -top-1 -right-1 sm:-top-1.5 sm:-right-1.5 bg-destructive text-destructive-foreground text-[9px] sm:text-[10px] w-4.5 h-4.5 sm:w-5 sm:h-5 rounded-full flex items-center justify-center font-black border border-background animate-bounce">
                     {cartCount}
                   </span>
                 )}
@@ -118,9 +119,9 @@ export function Layout({ children }: { children: ReactNode }) {
             {/* Mobile Menu Button */}
             <button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center hover:bg-white/10 active:scale-95 transition-all lg:hidden text-white cursor-pointer"
+              className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-white/5 border border-white/10 flex items-center justify-center hover:bg-white/10 active:scale-95 transition-all lg:hidden text-white cursor-pointer shrink-0"
             >
-              {isMobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+              {isMobileMenuOpen ? <X className="w-4 h-4 sm:w-5 sm:h-5" /> : <Menu className="w-4 h-4 sm:w-5 sm:h-5" />}
             </button>
           </div>
         </div>

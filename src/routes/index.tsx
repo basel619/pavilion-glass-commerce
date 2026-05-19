@@ -23,20 +23,22 @@ import heroLaptop from "@/assets/hero-laptop-new.png";
 import catLaptops from "@/assets/cat-laptops.png";
 import catParts from "@/assets/cat-parts.png";
 import catAccs from "@/assets/cat-accs.png";
-
 import { useDataStore } from "@/lib/data-store";
 
 export const Route = createFileRoute("/")({ component: Home });
 
 function Home() {
   const { t, lang, dir } = useI18n();
-  const { products, categories, banners, fetchHomeData } = useDataStore();
+  const { products, categories, banners, fetchData, loading } = useDataStore();
   const [currentSlide, setCurrentSlide] = useState(0);
 
   useEffect(() => {
-    fetchHomeData();
+    fetchData();
     supabase.from("visits").insert({ path: "/" });
   }, []);
+
+  const featuredProducts = products.slice(0, 8);
+  const featuredCategories = categories.slice(0, 6);
 
   useEffect(() => {
     if (banners.length <= 1) return;
@@ -243,7 +245,7 @@ function Home() {
             </Link>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
-            {categories.map((cat, i) => (
+            {featuredCategories.map((cat, i) => (
               <Link key={cat.id} to="/shop" className="glass rounded-3xl p-5 text-center hover:glass-strong hover:scale-[1.03] transition-all duration-500 group animate-slide-up" style={{ animationDelay: `${i * 50}ms` }}>
                 <div className="relative w-16 h-16 rounded-2xl bg-white/5 flex items-center justify-center mx-auto mb-4 group-hover:glow-primary-sm transition-all overflow-hidden border border-white/10">
                   <img src={getCatImg(cat)} alt="" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
@@ -268,16 +270,33 @@ function Home() {
           </Link>
         </div>
 
-        {products.length === 0 ? (
+        {loading && products.length === 0 ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="product-card group animate-pulse">
+                <div className="relative aspect-[4/3] bg-white/5" />
+                <div className="p-4 flex-1 flex flex-col gap-3">
+                  <div className="h-4 bg-white/10 rounded-md w-3/4" />
+                  <div className="h-4 bg-white/10 rounded-md w-1/2" />
+                  <div className="flex items-center gap-2 mt-auto pt-2 border-t border-white/5">
+                    <div className="w-11 h-11 rounded-xl bg-white/5" />
+                    <div className="w-11 h-11 rounded-xl bg-white/5" />
+                    <div className="flex-1 h-11 rounded-xl bg-white/5" />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : featuredProducts.length === 0 ? (
           <div className="glass-strong rounded-3xl p-20 text-center border-dashed border-white/10">
             <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-6">
               <ShoppingBag className="w-10 h-10 text-white/20" />
             </div>
-            <div className="font-bold text-xl text-white/40">{lang === "ar" ? "جاري تحميل المنتجات..." : "Loading products..."}</div>
+            <div className="font-bold text-xl text-white/40">{lang === "ar" ? "لا توجد منتجات حالياً" : "No products found"}</div>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {products.map((p, i) => (
+            {featuredProducts.map((p, i) => (
               <div key={p.id} className="animate-slide-up" style={{ animationDelay: `${i * 100}ms` }}>
                 <ProductCard product={p} />
               </div>

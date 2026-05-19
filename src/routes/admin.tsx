@@ -3,9 +3,9 @@ import { useEffect, useState } from "react";
 import { AdminLayout } from "@/components/AdminLayout";
 import { supabase } from "@/integrations/supabase/client";
 import { useI18n } from "@/lib/i18n";
-import { useDataStore } from "@/lib/data-store";
 import { Package, ShoppingBag, Users, DollarSign, Plus, Trash2, Edit2, Eye, X, LogOut, ShieldCheck, Lock, Mail, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
+import { useDataStore } from "@/lib/data-store";
 
 export const Route = createFileRoute("/admin")({ component: AdminDashboard });
 
@@ -156,12 +156,11 @@ function AdminDashboard() {
       setCats(c.data ?? []);
       setBrands(b.data ?? []);
       setBanners(bn.data ?? []);
-      const revenue = (o.data ?? []).reduce((s, x: any) => s + Number(x.total || 0), 0);
+      const revenue = (o.data ?? [])
+        .filter((x: any) => x.status === "delivered" || x.status === "تم التسليم")
+        .reduce((s, x: any) => s + Number(x.total || 0), 0);
       setStats({ visits: v.count ?? 0, orders: (o.data ?? []).length, revenue, products: (p.data ?? []).length });
-      
-      // Update data store so the storefront updates instantly
-      useDataStore.getState().fetchHomeData(true);
-      useDataStore.getState().fetchShopData(true);
+      useDataStore.getState().fetchData(true);
     } catch (err) {
       console.error("Load failed:", err);
       toast.error("Failed to load data");

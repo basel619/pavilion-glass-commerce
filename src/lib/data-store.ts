@@ -1,102 +1,96 @@
 import { create } from "zustand";
 import { supabase } from "@/integrations/supabase/client";
 
-interface DataState {
-  products: any[];
-  categories: any[];
-  banners: any[];
-  brands: any[];
-  loadingHome: boolean;
-  loadingShop: boolean;
-  fetchedHome: boolean;
-  fetchedShop: boolean;
-  fetchHomeData: (force?: boolean) => Promise<void>;
-  fetchShopData: (force?: boolean) => Promise<void>;
+export interface Product {
+  id: string;
+  name_ar: string;
+  name_en: string;
+  sku: string | null;
+  image: string | null;
+  regular_price: number;
+  sale_price: number | null;
+  stock: number;
+  in_stock: boolean;
+  rating: number | null;
+  description_ar: string | null;
+  description_en: string | null;
+  category_id: string | null;
+  brand_id: string | null;
+  created_at?: string;
 }
 
-export const useDataStore = create<DataState>((set, get) => ({
+export interface BrandOpt {
+  id: string;
+  name_ar: string;
+  name_en: string;
+  parent_id?: string | null;
+  image?: string | null;
+}
+
+export interface CatOpt {
+  id: string;
+  name_ar: string;
+  name_en: string;
+  image?: string | null;
+}
+
+export interface Banner {
+  id: string;
+  title: string | null;
+  image_url: string;
+  link: string | null;
+  order_index: number;
+  active: boolean;
+  created_at?: string;
+}
+
+interface DataStore {
+  products: Product[];
+  brands: BrandOpt[];
+  categories: CatOpt[];
+  banners: Banner[];
+  loaded: boolean;
+  loading: boolean;
+  error: string | null;
+  fetchData: (force?: boolean) => Promise<void>;
+}
+
+export const useDataStore = create<DataStore>((set, get) => ({
   products: [],
+  brands: [],
   categories: [],
   banners: [],
-  brands: [],
-  loadingHome: false,
-  loadingShop: false,
-  fetchedHome: false,
-  fetchedShop: false,
-
-  fetchHomeData: async (force = false) => {
-    const state = get();
-    if (state.fetchedHome && !force) {
-      // Background refetch silently
-      Promise.all([
-        supabase.from("products").select("*").order("created_at", { ascending: false }).limit(8),
-        supabase.from("categories").select("*").limit(6),
-        supabase.from("banners").select("*").eq("active", true).order("order_index", { ascending: true })
-      ]).then(([p, c, b]) => {
-        set({
-          products: p.data ?? [],
-          categories: c.data ?? [],
-          banners: b.data ?? []
-        });
-      }).catch(err => console.error("Silent home refetch error:", err));
-      return;
-    }
-
-    set({ loadingHome: true });
+  loaded: false,
+  loading: false,
+  error: null,
+  fetchData: async (force = false) => {
+    if (get().loaded && !force && !get().loading) return;
+    set({ loading: true, error: null });
     try {
-      const [p, c, b] = await Promise.all([
-        supabase.from("products").select("*").order("created_at", { ascending: false }).limit(8),
-        supabase.from("categories").select("*").limit(6),
+      const [p, b, c, bn] = await Promise.all([
+        supabase.from("products").select("*").order("created_at", { ascending: false }),
+        supabase.from("brands").select("*").order("name_en"),
+        supabase.from("categories").select("*").order("name_en"),
         supabase.from("banners").select("*").eq("active", true).order("order_index", { ascending: true })
       ]);
-      set({
-        products: p.data ?? [],
-        categories: c.data ?? [],
-        banners: b.data ?? [],
-        fetchedHome: true,
-        loadingHome: false
-      });
-    } catch (e) {
-      console.error("fetchHomeData error:", e);
-      set({ loadingHome: false });
-    }
-  },
 
-  fetchShopData: async (force = false) => {
-    const state = get();
-    if (state.fetchedShop && !force) {
-      // Background refetch silently
-      Promise.all([
-        supabase.from("products").select("*").order("created_at", { ascending: false }),
-        supabase.from("brands").select("id,name_ar,name_en,parent_id").order("name_en"),
-        supabase.from("categories").select("id,name_ar,name_en").order("name_en"),
-      ]).then(([p, b, c]) => {
-        set({
-          products: p.data ?? [],
-          brands: b.data ?? [],
-          categories: c.data ?? []
-        });
-      }).catch(err => console.error("Silent shop refetch error:", err));
-      return;
-    }
+      const prods = (p.data ?? []).map(x => ({
+        ...x,
+        regular_price: Number(x.regular_price) || 0,
+        sale_price: x.sale_price ? (Number(x.sale_price) || null) : null
+      })) as Product[];
 
-    set({ loadingShop: true });
-    try {
-      const [p, b, c] = await Promise.all([
-        supabase.from("products").select("*").order("created_at", { ascending: false }),
-        supabase.from("brands").select("id,name_ar,name_en,parent_id").order("name_en"),
-        supabase.from("categories").select("id,name_ar,name_en").order("name_en"),
-      ]);
       set({
-        products: p.data ?? [],
-        brands: b.data ?? [],
-        categories: c.data ?? [],
-        fetchedShop: true,
-        loadingShop: false
+        products: prods,
+        brands: (b.data ?? []) as BrandOpt[],
+        categories: (c.data ?? []) as CatOpt[],
+        banners: (bn.data ?? []) as Banner[],
+        loaded: true,
+        loading: false
       });
-    } catch (e) {
-      console.error("fetchShopData error:", e);
-      set({ loadingShop: false });
+    } catch (err: any) {
+      console.error("Data store fetch error:", err);
+      set({ error: err.message || "Failed to load data", loading: false });
     }
   }
 }));

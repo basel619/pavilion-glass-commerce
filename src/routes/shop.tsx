@@ -7,30 +7,22 @@ import { supabase } from "@/integrations/supabase/client";
 import { useI18n } from "@/lib/i18n";
 import { SlidersHorizontal, X } from "lucide-react";
 
+import { useDataStore } from "@/lib/data-store";
+
 export const Route = createFileRoute("/shop")({
   head: () => ({ meta: [{ title: "المتجر — Pavilion" }, { name: "description", content: "تصفح اللابتوبات وقطع الغيار" }] }),
   component: Shop,
 });
 
-import { useDataStore } from "@/lib/data-store";
-
 function Shop() {
   const { t, lang } = useI18n();
-  const { products: storeProducts, brands, categories: cats, loadingShop: loading, fetchShopData } = useDataStore();
+  const { products, brands, categories: cats, fetchData, loading } = useDataStore();
   const [maxPrice, setMaxPrice] = useState(5000000);
   const [filters, setFilters] = useState<FilterState>({ q: "", brands: [], categories: [], price: [0, 5000000] });
   const [isFilterOpen, setIsFilterOpen] = useState(false);
 
-  const products = useMemo(() => {
-    return storeProducts.map(x => ({
-      ...x,
-      regular_price: Number(x.regular_price) || 0,
-      sale_price: x.sale_price ? (Number(x.sale_price) || null) : null
-    })) as Product[];
-  }, [storeProducts]);
-
   useEffect(() => {
-    fetchShopData();
+    fetchData();
   }, []);
 
   useEffect(() => {
@@ -38,7 +30,13 @@ function Shop() {
       const prices = products.map((x) => x.regular_price).filter(price => !isNaN(price) && price > 0);
       const max = prices.reduce((maxVal, p) => p > maxVal ? p : maxVal, 5000000);
       setMaxPrice(max);
-      setFilters((f) => ({ ...f, price: [0, max] }));
+      setFilters((f) => {
+        // Only override price range if it is at defaults
+        if (f.price[0] === 0 && f.price[1] === 5000000) {
+          return { ...f, price: [0, max] };
+        }
+        return f;
+      });
     }
   }, [products]);
 

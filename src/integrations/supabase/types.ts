@@ -82,21 +82,24 @@ export type Database = {
           id: string
           name_ar: string
           name_en: string
-          slug: string
+          slug: string | null
+          image: string | null
         }
         Insert: {
           created_at?: string
           id?: string
           name_ar: string
           name_en: string
-          slug: string
+          slug?: string | null
+          image?: string | null
         }
         Update: {
           created_at?: string
           id?: string
           name_ar?: string
           name_en?: string
-          slug?: string
+          slug?: string | null
+          image?: string | null
         }
         Relationships: []
       }

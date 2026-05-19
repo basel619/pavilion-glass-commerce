@@ -154,16 +154,8 @@ function Home() {
       ) : (
         /* Static Original Hero Section */
         <section className="relative min-h-screen flex flex-col rounded-[2.5rem] overflow-hidden mb-12 shadow-2xl">
-          {/* Background Image with Cinematic Overlay */}
-          <div className="absolute inset-0 z-0">
-            <img 
-              src={heroLaptop} 
-              alt="PAVILION Premium" 
-              className="w-full h-full object-cover object-center scale-100 animate-subtle-zoom brightness-[0.75] contrast-[1.1]" 
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-[#060312] via-[#060312]/50 to-transparent" />
-            <div className="absolute inset-0 bg-black/30 backdrop-blur-[1px]" />
-            
+          {/* Cinematic Gradient Background */}
+          <div className="absolute inset-0 z-0 bg-gradient-to-br from-[#12072b] via-[#060312] to-[#0a051a]">
             {/* Decorative Glows */}
             <div className="absolute top-1/4 -left-20 w-96 h-96 bg-primary/20 blur-[120px] rounded-full animate-pulse" />
             <div className="absolute bottom-1/4 -right-20 w-96 h-96 bg-accent/20 blur-[120px] rounded-full animate-pulse delay-700" />
@@ -301,24 +293,37 @@ function Home() {
 
       {/* ─── CTA Banner ──────────────────────────────── */}
       <section className="mt-10">
-        <div className="glass-strong rounded-3xl p-8 sm:p-12 relative overflow-hidden text-center">
-          <div className="absolute inset-0 bg-gradient-to-r from-primary/10 via-accent/5 to-primary/10" />
-          <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: "radial-gradient(circle, white 1px, transparent 1px)", backgroundSize: "20px 20px" }} />
-          <div className="relative">
+        <div className="glass-strong rounded-3xl p-8 sm:p-12 relative overflow-hidden text-center min-h-[320px] flex items-center justify-center">
+          {/* Background Image with Cinematic Overlay */}
+          <div className="absolute inset-0 z-0">
+            <img 
+              src={heroLaptop} 
+              alt="PAVILION Premium" 
+              className="w-full h-full object-cover object-center brightness-[0.6] contrast-[1.15]" 
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-[#060312]/80 via-[#060312]/40 to-[#060312]/80" />
+            <div className="absolute inset-0 bg-black/35 backdrop-blur-[1px]" />
+            
+            {/* Decorative Glows */}
+            <div className="absolute top-1/4 -left-20 w-72 h-72 bg-primary/15 blur-[80px] rounded-full animate-pulse" />
+            <div className="absolute bottom-1/4 -right-20 w-72 h-72 bg-accent/15 blur-[80px] rounded-full animate-pulse delay-700" />
+          </div>
+          <div className="absolute inset-0 opacity-[0.03] z-1" style={{ backgroundImage: "radial-gradient(circle, white 1px, transparent 1px)", backgroundSize: "20px 20px" }} />
+          <div className="relative z-10 w-full">
             <div className="inline-flex items-center gap-2 badge badge-info mb-4">
               <MapPin className="w-3 h-3" />
               {lang === "ar" ? "تعال زورنا" : "Visit Us"}
             </div>
-            <h2 className="text-2xl sm:text-3xl font-extrabold mb-2">
+            <h2 className="text-2xl sm:text-4xl font-extrabold mb-2 text-white drop-shadow-lg">
               {lang === "ar" ? "تجربة تسوق لا مثيل لها" : "Unmatched Shopping Experience"}
             </h2>
-            <p className="text-muted-foreground text-sm mb-6 max-w-md mx-auto leading-relaxed">{t("location")}</p>
+            <p className="text-white/80 text-sm mb-6 max-w-md mx-auto leading-relaxed drop-shadow-md">{t("location")}</p>
             <div className="flex flex-wrap gap-3 justify-center">
               <a href="https://wa.me/9647712715130" target="_blank" rel="noopener noreferrer"
                 className="btn-primary !px-6 gap-2">
                 💬 WhatsApp
               </a>
-              <Link to="/contact" className="btn-ghost !px-6">
+              <Link to="/contact" className="btn-ghost !px-6 text-white border-white/20 hover:bg-white/10">
                 {t("contact")}
               </Link>
             </div>

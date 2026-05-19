@@ -14,6 +14,7 @@ export const Route = createFileRoute("/shop")({
 
 function Shop() {
   const { t, lang } = useI18n();
+  const [loading, setLoading] = useState(true);
   const [products, setProducts] = useState<Product[]>([]);
   const [brands, setBrands] = useState<BrandOpt[]>([]);
   const [cats, setCats] = useState<CatOpt[]>([]);
@@ -23,24 +24,31 @@ function Shop() {
 
   useEffect(() => {
     (async () => {
-      const [p, b, c] = await Promise.all([
-        supabase.from("products").select("*").order("created_at", { ascending: false }),
-        supabase.from("brands").select("id,name_ar,name_en,parent_id").order("name_en"),
-        supabase.from("categories").select("id,name_ar,name_en").order("name_en"),
-      ]);
-      const prods = (p.data ?? []).map(x => ({
-        ...x,
-        regular_price: Number(x.regular_price) || 0,
-        sale_price: x.sale_price ? (Number(x.sale_price) || null) : null
-      })) as Product[];
-      setProducts(prods);
-      setBrands((b.data ?? []) as BrandOpt[]);
-      setCats((c.data ?? []) as CatOpt[]);
-      
-      const prices = prods.map((x) => x.regular_price).filter(price => !isNaN(price) && price > 0);
-      const max = prices.reduce((maxVal, p) => p > maxVal ? p : maxVal, 5000000);
-      setMaxPrice(max);
-      setFilters((f) => ({ ...f, price: [0, max] }));
+      setLoading(true);
+      try {
+        const [p, b, c] = await Promise.all([
+          supabase.from("products").select("*").order("created_at", { ascending: false }),
+          supabase.from("brands").select("id,name_ar,name_en,parent_id").order("name_en"),
+          supabase.from("categories").select("id,name_ar,name_en").order("name_en"),
+        ]);
+        const prods = (p.data ?? []).map(x => ({
+          ...x,
+          regular_price: Number(x.regular_price) || 0,
+          sale_price: x.sale_price ? (Number(x.sale_price) || null) : null
+        })) as Product[];
+        setProducts(prods);
+        setBrands((b.data ?? []) as BrandOpt[]);
+        setCats((c.data ?? []) as CatOpt[]);
+        
+        const prices = prods.map((x) => x.regular_price).filter(price => !isNaN(price) && price > 0);
+        const max = prices.reduce((maxVal, p) => p > maxVal ? p : maxVal, 5000000);
+        setMaxPrice(max);
+        setFilters((f) => ({ ...f, price: [0, max] }));
+      } catch (err) {
+        console.error("Shop load error:", err);
+      } finally {
+        setLoading(false);
+      }
     })();
   }, []);
 
@@ -70,7 +78,9 @@ function Shop() {
 
         <div>
           <div className="glass rounded-2xl px-4 py-3 mb-4 text-sm flex items-center justify-between gap-4">
-            <span className="font-bold">{filtered.length} {lang === "ar" ? "منتج" : "products"}</span>
+            <span className="font-bold">
+              {loading ? "..." : `${filtered.length} ${lang === "ar" ? "منتج" : "products"}`}
+            </span>
             
             {/* Mobile Filter Button */}
             <button
@@ -81,7 +91,24 @@ function Shop() {
             </button>
           </div>
 
-          {filtered.length === 0 ? (
+          {loading ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className="product-card group animate-pulse">
+                  <div className="relative aspect-[4/3] bg-white/5" />
+                  <div className="p-4 flex-1 flex flex-col gap-3">
+                    <div className="h-4 bg-white/10 rounded-md w-3/4" />
+                    <div className="h-4 bg-white/10 rounded-md w-1/2" />
+                    <div className="flex items-center gap-2 mt-auto pt-2 border-t border-white/5">
+                      <div className="w-11 h-11 rounded-xl bg-white/5" />
+                      <div className="w-11 h-11 rounded-xl bg-white/5" />
+                      <div className="flex-1 h-11 rounded-xl bg-white/5" />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : filtered.length === 0 ? (
             <div className="glass rounded-2xl py-20 text-center text-muted-foreground">{t("no_results")}</div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">

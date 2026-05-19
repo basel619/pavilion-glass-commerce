@@ -25,8 +25,8 @@ function ContactPage() {
           </div>
           <div className="flex items-center gap-2 pt-2">
             <a href="https://wa.me/9647712715130" target="_blank" rel="noreferrer" className="glass rounded-xl px-4 py-2 flex items-center gap-2 hover:bg-emerald-500/20 hover:text-emerald-400 transition"><MessageCircle className="w-4 h-4" /> WhatsApp</a>
-            <a href="https://facebook.com" target="_blank" rel="noreferrer" className="glass rounded-xl px-4 py-2 flex items-center gap-2 hover:bg-blue-500/20 hover:text-blue-400 transition"><Facebook className="w-4 h-4" /> Facebook</a>
-            <a href="https://instagram.com" target="_blank" rel="noreferrer" className="glass rounded-xl px-4 py-2 flex items-center gap-2 hover:bg-pink-500/20 hover:text-pink-400 transition"><Instagram className="w-4 h-4" /> Instagram</a>
+            <a href="https://www.facebook.com/share/18V817G7BM/" target="_blank" rel="noreferrer" className="glass rounded-xl px-4 py-2 flex items-center gap-2 hover:bg-blue-500/20 hover:text-blue-400 transition"><Facebook className="w-4 h-4" /> Facebook</a>
+            <a href="https://www.instagram.com/pavilion_data?igsh=MWRjeHFpcmlnbzBrbA==" target="_blank" rel="noreferrer" className="glass rounded-xl px-4 py-2 flex items-center gap-2 hover:bg-pink-500/20 hover:text-pink-400 transition"><Instagram className="w-4 h-4" /> Instagram</a>
           </div>
         </div>
         <div className="glass-strong rounded-2xl overflow-hidden min-h-[300px]">

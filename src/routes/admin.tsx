@@ -94,15 +94,22 @@ function AdminDashboard() {
 
   const exportOrdersCSV = () => {
     if (filteredOrders.length === 0) return toast.error(lang === "ar" ? "لا توجد طلبات للتصدير" : "No orders to export");
-    const headers = ["Order ID", "Customer", "Phone", "Status", "Total", "Date"];
-    const rows = filteredOrders.map(o => [
-      o.id,
-      `"${o.customer_name}"`,
-      `"${o.customer_phone}"`,
-      o.status,
-      o.total,
-      `"${new Date(o.created_at).toLocaleString()}"`
-    ]);
+    const headers = ["Order ID", "Customer", "Phone", "Status", "Total", "Date", "Items"];
+    const rows = filteredOrders.map(o => {
+      let itemsStr = "";
+      if (Array.isArray(o.items)) {
+        itemsStr = o.items.map((item: any) => `${item.quantity || 1}x ${item.name_ar || item.name_en || 'Product'} (${item.price || 0} IQD)`).join(" | ");
+      }
+      return [
+        o.id,
+        `"${(o.customer_name || "").replace(/"/g, '""')}"`,
+        `"${(o.customer_phone || "").replace(/"/g, '""')}"`,
+        o.status,
+        o.total,
+        `"${new Date(o.created_at).toLocaleString()}"`,
+        `"${itemsStr.replace(/"/g, '""')}"`
+      ];
+    });
     const csvContent = [headers.join(","), ...rows.map(e => e.join(","))].join("\n");
     const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
@@ -112,42 +119,6 @@ function AdminDashboard() {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-  };
-
-  const importOrdersCSV = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setBusy(true);
-    try {
-      const text = await file.text();
-      const rows = text.split("\n").map(r => r.trim()).filter(Boolean);
-      if (rows.length <= 1) throw new Error("File is empty or invalid");
-      
-      const newOrders = [];
-      for (let i = 1; i < rows.length; i++) {
-        const cols = rows[i].split(",").map(c => c.replace(/^"|"$/g, "").trim());
-        if (cols.length >= 5) {
-          newOrders.push({
-            customer_name: cols[1],
-            customer_phone: cols[2],
-            status: cols[3] || "pending",
-            total: Number(cols[4]) || 0,
-            items: []
-          });
-        }
-      }
-      
-      if (newOrders.length === 0) throw new Error("No valid rows found");
-      const { error } = await supabase.from("orders").insert(newOrders);
-      if (error) throw error;
-      toast.success(lang === "ar" ? `تم استيراد ${newOrders.length} طلب` : `Imported ${newOrders.length} orders`);
-      loadAll();
-    } catch (err: any) {
-      toast.error(err.message);
-    } finally {
-      setBusy(false);
-      e.target.value = "";
-    }
   };
 
   useEffect(() => {
@@ -458,39 +429,89 @@ function AdminDashboard() {
   };
 
 
+  const exportProductsCSV = () => {
+    if (products.length === 0) return toast.error(lang === "ar" ? "لا توجد منتجات للتصدير" : "No products to export");
+    const headers = ["Name AR", "Name EN", "Regular Price", "Sale Price", "Stock", "SKU", "Image URL", "Category ID", "Brand ID"];
+    const rows = products.map(p => [
+      `"${(p.name_ar || "").replace(/"/g, '""')}"`,
+      `"${(p.name_en || "").replace(/"/g, '""')}"`,
+      p.regular_price || 0,
+      p.sale_price || "",
+      p.stock || 0,
+      `"${(p.sku || "").replace(/"/g, '""')}"`,
+      `"${(p.image || "").replace(/"/g, '""')}"`,
+      `"${(p.category_id || "").replace(/"/g, '""')}"`,
+      `"${(p.brand_id || "").replace(/"/g, '""')}"`
+    ]);
+    const csvContent = [headers.join(","), ...rows.map(e => e.join(","))].join("\n");
+    const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute("download", `products_backup_${new Date().toLocaleDateString()}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = async (ev) => {
-      const text = ev.target?.result as string;
-      const lines = text.split("\n").filter(l => l.trim());
-      const headers = lines[0].split(",").map(h => h.trim());
-      const data = lines.slice(1).map(line => {
-        const values = line.split(",").map(v => v.trim());
-        const obj: any = {};
-        headers.forEach((h, i) => obj[h] = values[i]);
-        return {
-          name_ar: obj.name_ar,
-          name_en: obj.name_en,
-          regular_price: Number(obj.regular_price || 0),
-          stock: Number(obj.stock || 0),
-          in_stock: Number(obj.stock || 0) > 0,
-          sku: obj.sku || null,
-          description_ar: obj.description_ar || null,
-          description_en: obj.description_en || null,
-        };
-      });
-      const { error } = await supabase.from("products").insert(data);
-      if (error) { 
-        console.error("Order error:", error);
-        toast.error(lang === "ar" ? `فشل الطلب: ${error.message}` : `Order failed: ${error.message}`); 
-        return; 
+    setBusy(true);
+    try {
+      const text = await file.text();
+      const rows = text.split("\n").map(r => r.trim()).filter(Boolean);
+      if (rows.length <= 1) throw new Error("File is empty or invalid");
+      
+      const parseCSVRow = (str: string) => {
+        const result = [];
+        let cur = "";
+        let inQuote = false;
+        for (let i = 0; i < str.length; i++) {
+            if (inQuote) {
+                if (str[i] === '"') {
+                    if (i < str.length - 1 && str[i + 1] === '"') { cur += '"'; i++; } else { inQuote = false; }
+                } else { cur += str[i]; }
+            } else {
+                if (str[i] === '"') { inQuote = true; } else if (str[i] === ',') { result.push(cur.trim()); cur = ""; } else { cur += str[i]; }
+            }
+        }
+        result.push(cur.trim());
+        return result;
+      };
+
+      const newProducts = [];
+      for (let i = 1; i < rows.length; i++) {
+        const cols = parseCSVRow(rows[i]);
+        if (cols.length >= 3) {
+          const nameAr = cols[0];
+          if (!nameAr) continue;
+          newProducts.push({
+            name_ar: nameAr,
+            name_en: cols[1] || nameAr,
+            regular_price: Number(cols[2]) || 0,
+            sale_price: cols[3] ? Number(cols[3]) : null,
+            stock: Number(cols[4]) || 0,
+            in_stock: (Number(cols[4]) || 0) > 0,
+            sku: cols[5] || null,
+            image: cols[6] || null,
+            category_id: cols[7] || null,
+            brand_id: cols[8] || null,
+          });
+        }
       }
-      toast.success(lang === "ar" ? "تم استيراد المنتجات" : `Imported ${data.length} products`); 
+      
+      if (newProducts.length === 0) throw new Error("No valid products found in file");
+      const { error } = await supabase.from("products").insert(newProducts);
+      if (error) throw error;
+      toast.success(lang === "ar" ? `تم استيراد ${newProducts.length} منتج` : `Imported ${newProducts.length} products`);
       loadAll();
-    };
-    reader.readAsText(file);
+    } catch (err: any) {
+      toast.error(err.message);
+    } finally {
+      setBusy(false);
+      e.target.value = "";
+    }
   };
 
   // 1. Loading state
@@ -647,9 +668,14 @@ function AdminDashboard() {
               className="btn-primary gap-2">
               <Plus className="w-4 h-4" /> {t("add_product")}
             </button>
-            <label className="btn-ghost gap-2 cursor-pointer">
+            <button
+              onClick={exportProductsCSV}
+              className="btn-secondary gap-2 whitespace-nowrap">
+              <Package className="w-4 h-4" /> {lang === "ar" ? "تصدير إكسل" : "Export Excel"}
+            </button>
+            <label className="btn-ghost gap-2 cursor-pointer whitespace-nowrap">
               <Package className="w-4 h-4" />
-              {lang === "ar" ? "استيراد CSV" : "Import CSV"}
+              {lang === "ar" ? "استيراد إكسل" : "Import Excel"}
               <input type="file" accept=".csv" onChange={handleImport} className="hidden" />
             </label>
           </div>
@@ -730,10 +756,6 @@ function AdminDashboard() {
               <button onClick={exportOrdersCSV} className="btn-secondary !h-9 !px-3 !py-0 !text-xs font-bold whitespace-nowrap">
                 {lang === "ar" ? "تصدير Excel" : "Export CSV"}
               </button>
-              <label className="btn-secondary !h-9 !px-3 !py-0 !text-xs font-bold whitespace-nowrap cursor-pointer flex items-center">
-                {lang === "ar" ? "استيراد" : "Import"}
-                <input type="file" accept=".csv" className="hidden" onChange={importOrdersCSV} />
-              </label>
 
               <div className="h-6 w-px bg-white/10 mx-1 hidden sm:block"></div>
 

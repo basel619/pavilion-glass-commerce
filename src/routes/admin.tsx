@@ -42,26 +42,113 @@ function AdminDashboard() {
   const [newPassword, setNewPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [orderDateFilter, setOrderDateFilter] = useState<"all" | "today" | "week" | "month">("all");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 30;
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [orderDateFilter, dateFrom, dateTo]);
 
   const filteredOrders = useMemo(() => {
-    if (orderDateFilter === "all") return orders;
-    const now = new Date();
-    return orders.filter((o) => {
-      const d = new Date(o.created_at);
-      if (orderDateFilter === "today") {
-        return d.toDateString() === now.toDateString();
-      } else if (orderDateFilter === "week") {
-        const diffTime = Math.abs(now.getTime() - d.getTime());
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-        return diffDays <= 7;
-      } else if (orderDateFilter === "month") {
-        const diffTime = Math.abs(now.getTime() - d.getTime());
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-        return diffDays <= 30;
+    let result = orders;
+    
+    // Quick filter
+    if (orderDateFilter !== "all") {
+      const now = new Date();
+      result = result.filter((o) => {
+        const d = new Date(o.created_at);
+        if (orderDateFilter === "today") {
+          return d.toDateString() === now.toDateString();
+        } else if (orderDateFilter === "week") {
+          const diffDays = (now.getTime() - d.getTime()) / (1000 * 3600 * 24);
+          return diffDays <= 7;
+        } else if (orderDateFilter === "month") {
+          const diffDays = (now.getTime() - d.getTime()) / (1000 * 3600 * 24);
+          return diffDays <= 30;
+        }
+        return true;
+      });
+    }
+
+    // Custom From/To filter
+    if (dateFrom) {
+      const from = new Date(dateFrom).getTime();
+      result = result.filter((o) => new Date(o.created_at).getTime() >= from);
+    }
+    if (dateTo) {
+      // Add 1 day to include the whole end date
+      const to = new Date(dateTo).getTime() + (24 * 60 * 60 * 1000);
+      result = result.filter((o) => new Date(o.created_at).getTime() < to);
+    }
+
+    return result;
+  }, [orders, orderDateFilter, dateFrom, dateTo]);
+
+  const paginatedOrders = useMemo(() => {
+    const startIndex = (currentPage - 1) * pageSize;
+    return filteredOrders.slice(startIndex, startIndex + pageSize);
+  }, [filteredOrders, currentPage, pageSize]);
+  const totalPages = Math.ceil(filteredOrders.length / pageSize) || 1;
+
+  const exportOrdersCSV = () => {
+    if (filteredOrders.length === 0) return toast.error(lang === "ar" ? "لا توجد طلبات للتصدير" : "No orders to export");
+    const headers = ["Order ID", "Customer", "Phone", "Status", "Total", "Date"];
+    const rows = filteredOrders.map(o => [
+      o.id,
+      `"${o.customer_name}"`,
+      `"${o.customer_phone}"`,
+      o.status,
+      o.total,
+      `"${new Date(o.created_at).toLocaleString()}"`
+    ]);
+    const csvContent = [headers.join(","), ...rows.map(e => e.join(","))].join("\n");
+    const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute("download", `orders_export_${new Date().toLocaleDateString()}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const importOrdersCSV = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setBusy(true);
+    try {
+      const text = await file.text();
+      const rows = text.split("\n").map(r => r.trim()).filter(Boolean);
+      if (rows.length <= 1) throw new Error("File is empty or invalid");
+      
+      const newOrders = [];
+      for (let i = 1; i < rows.length; i++) {
+        const cols = rows[i].split(",").map(c => c.replace(/^"|"$/g, "").trim());
+        if (cols.length >= 5) {
+          newOrders.push({
+            customer_name: cols[1],
+            customer_phone: cols[2],
+            status: cols[3] || "pending",
+            total: Number(cols[4]) || 0,
+            items: []
+          });
+        }
       }
-      return true;
-    });
-  }, [orders, orderDateFilter]);
+      
+      if (newOrders.length === 0) throw new Error("No valid rows found");
+      const { error } = await supabase.from("orders").insert(newOrders);
+      if (error) throw error;
+      toast.success(lang === "ar" ? `تم استيراد ${newOrders.length} طلب` : `Imported ${newOrders.length} orders`);
+      loadAll();
+    } catch (err: any) {
+      toast.error(err.message);
+    } finally {
+      setBusy(false);
+      e.target.value = "";
+    }
+  };
 
   useEffect(() => {
     const auth = localStorage.getItem("isAdmin") === "true";
@@ -639,7 +726,26 @@ function AdminDashboard() {
               {lang === "ar" ? "إدارة الطلبات" : "Manage Orders"}
               <span className="badge badge-warning">{filteredOrders.filter(o => o.status === "pending").length} {lang === "ar" ? "معلق" : "pending"}</span>
             </h3>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-3">
+              <button onClick={exportOrdersCSV} className="btn-secondary !h-9 !px-3 !py-0 !text-xs font-bold whitespace-nowrap">
+                {lang === "ar" ? "تصدير Excel" : "Export CSV"}
+              </button>
+              <label className="btn-secondary !h-9 !px-3 !py-0 !text-xs font-bold whitespace-nowrap cursor-pointer flex items-center">
+                {lang === "ar" ? "استيراد" : "Import"}
+                <input type="file" accept=".csv" className="hidden" onChange={importOrdersCSV} />
+              </label>
+
+              <div className="h-6 w-px bg-white/10 mx-1 hidden sm:block"></div>
+
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-muted-foreground">{lang === "ar" ? "من:" : "From:"}</span>
+                <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} className="field-input !h-9 !px-2 !text-xs !w-auto" />
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-muted-foreground">{lang === "ar" ? "إلى:" : "To:"}</span>
+                <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className="field-input !h-9 !px-2 !text-xs !w-auto" />
+              </div>
+
               <select
                 value={orderDateFilter}
                 onChange={(e) => setOrderDateFilter(e.target.value as any)}
@@ -662,7 +768,7 @@ function AdminDashboard() {
               <th className="text-end">{lang === "ar" ? "إجراءات" : "Actions"}</th>
             </tr></thead>
             <tbody>
-              {filteredOrders.map((o) => (
+              {paginatedOrders.map((o) => (
                 <tr key={o.id}>
                   <td>
                     <div className="flex items-center gap-2.5">
@@ -705,6 +811,29 @@ function AdminDashboard() {
               )}
             </tbody>
           </table>
+          {totalPages > 1 && (
+            <div className="px-6 py-4 border-t border-[oklch(1_0_0/10%)] flex items-center justify-between">
+              <span className="text-xs text-muted-foreground">
+                {lang === "ar" ? `صفحة ${currentPage} من ${totalPages}` : `Page ${currentPage} of ${totalPages}`}
+              </span>
+              <div className="flex items-center gap-2">
+                <button 
+                  disabled={currentPage === 1} 
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  className="btn-secondary !h-8 !px-3 !text-xs"
+                >
+                  {lang === "ar" ? "السابق" : "Prev"}
+                </button>
+                <button 
+                  disabled={currentPage === totalPages} 
+                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                  className="btn-secondary !h-8 !px-3 !text-xs"
+                >
+                  {lang === "ar" ? "التالي" : "Next"}
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 

@@ -45,8 +45,8 @@ export function Layout({ children }: { children: ReactNode }) {
         <div className="glass-strong rounded-2xl sm:rounded-[1.5rem] px-3 sm:px-8 py-2.5 sm:py-3 flex items-center justify-between border border-white/5 shadow-2xl backdrop-blur-3xl">
           {/* Logo */}
           <Link to="/" className="flex items-center gap-3 shrink-0 group">
-            <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl sm:rounded-2xl bg-gradient-to-br from-primary to-primary-glow flex items-center justify-center glow-primary-sm group-hover:scale-110 transition-transform shadow-lg shrink-0">
-              <Laptop className="w-5 h-5 sm:w-6 sm:h-6 text-primary-foreground" />
+            <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl sm:rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform shadow-lg shrink-0 overflow-hidden bg-white p-1">
+              <img src="/logo.png" alt="Pavilion" className="w-full h-full object-contain" />
             </div>
             <div className="hidden sm:block">
               <div className="font-black text-xl leading-tight gradient-text tracking-widest uppercase">{t("brand")}</div>
@@ -177,7 +177,9 @@ export function Layout({ children }: { children: ReactNode }) {
               <div className="space-y-6">
                 <h4 className="text-xs font-black uppercase tracking-[0.2em] text-white/30">{lang === "ar" ? "الدعم" : "SUPPORT"}</h4>
                 <div className="flex flex-col gap-4">
-                  <Link to="/contact" className="text-sm text-muted-foreground hover:text-primary-glow transition-colors font-semibold tracking-wide">{t("contact")}</Link>
+                  <a href="https://wa.me/9647712715130" target="_blank" rel="noopener noreferrer" className="text-sm text-muted-foreground hover:text-primary-glow transition-colors font-semibold tracking-wide">
+                    {lang === "ar" ? "اتصل بنا" : "Contact Us"}
+                  </a>
                 </div>
               </div>
             </div>
@@ -234,8 +236,8 @@ export function Layout({ children }: { children: ReactNode }) {
           <aside className="fixed inset-y-0 start-0 z-50 w-72 glass-strong flex flex-col transition-transform duration-300 xl:hidden animate-slide-right">
             <div className="flex items-center justify-between p-5 border-b border-white/10">
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary to-primary-glow flex items-center justify-center glow-primary-sm">
-                  <Laptop className="w-5 h-5 text-primary-foreground" />
+                <div className="w-9 h-9 rounded-xl bg-white flex items-center justify-center overflow-hidden p-1">
+                  <img src="/logo.png" alt="Pavilion" className="w-full h-full object-contain" />
                 </div>
                 <span className="font-black gradient-text uppercase tracking-wider">{t("brand")}</span>
               </div>

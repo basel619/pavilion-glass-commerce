@@ -45,7 +45,7 @@ export function Layout({ children }: { children: ReactNode }) {
         <div className="glass-strong rounded-2xl sm:rounded-[1.5rem] px-3 sm:px-8 py-2.5 sm:py-3 flex items-center justify-between border border-white/5 shadow-2xl backdrop-blur-3xl">
           {/* Logo */}
           <Link to="/" className="flex items-center gap-3 shrink-0 group">
-            <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl sm:rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform shadow-lg shrink-0 overflow-hidden bg-white p-1">
+            <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform shadow-lg shrink-0 overflow-hidden bg-white p-1">
               <img src="/logo.png" alt="Pavilion" className="w-full h-full object-contain" />
             </div>
             <div className="hidden sm:block">
@@ -236,7 +236,7 @@ export function Layout({ children }: { children: ReactNode }) {
           <aside className="fixed inset-y-0 start-0 z-50 w-72 glass-strong flex flex-col transition-transform duration-300 xl:hidden animate-slide-right">
             <div className="flex items-center justify-between p-5 border-b border-white/10">
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-xl bg-white flex items-center justify-center overflow-hidden p-1">
+                <div className="w-9 h-9 rounded-full bg-white flex items-center justify-center overflow-hidden p-1">
                   <img src="/logo.png" alt="Pavilion" className="w-full h-full object-contain" />
                 </div>
                 <span className="font-black gradient-text uppercase tracking-wider">{t("brand")}</span>

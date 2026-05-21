@@ -93,7 +93,7 @@ export function AdminLayout({ children }: { children?: ReactNode }) {
     <>
       {/* Logo */}
       <div className={`p-5 flex items-center gap-3 ${!isSidebarOpen ? "justify-center" : ""}`}>
-        <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 animate-float overflow-hidden bg-white p-1">
+        <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 animate-float overflow-hidden bg-white p-1">
           <img src="/logo.png" alt="Pavilion Admin Logo" className="w-full h-full object-contain" />
         </div>
         {isSidebarOpen && (

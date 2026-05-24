@@ -34,7 +34,7 @@ function CategoriesPage() {
       <h1 className="text-3xl font-bold mb-6">{t("categories")}</h1>
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
         {cats.map((c) => (
-          <Link key={c.id} to={`/shop?category=${c.id}`}
+          <Link key={c.id} to="/shop" search={{ category: c.id }}
             className="glass rounded-2xl p-6 flex flex-col items-center gap-4 hover:glass-strong hover:-translate-y-1 transition group">
             <div className="w-20 h-20 sm:w-24 sm:h-24 flex items-center justify-center transition">
               <img src={getCatImg(c)} alt={c.name_en} className="w-full h-full object-contain rounded-2xl group-hover:scale-110 transition-transform duration-300" />

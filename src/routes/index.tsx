@@ -246,7 +246,7 @@ function Home() {
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
             {featuredCategories.map((cat, i) => (
-              <Link key={cat.id} to="/shop" className="glass rounded-3xl p-5 text-center hover:glass-strong hover:scale-[1.03] transition-all duration-500 group animate-slide-up" style={{ animationDelay: `${i * 50}ms` }}>
+              <Link key={cat.id} to="/shop" search={{ category: cat.id }} className="glass rounded-3xl p-5 text-center hover:glass-strong hover:scale-[1.03] transition-all duration-500 group animate-slide-up" style={{ animationDelay: `${i * 50}ms` }}>
                 <div className="relative w-16 h-16 rounded-2xl bg-white/5 flex items-center justify-center mx-auto mb-4 group-hover:glow-primary-sm transition-all overflow-hidden border border-white/10">
                   <img src={getCatImg(cat)} alt="" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
                   <div className="absolute inset-0 bg-primary/10 opacity-0 group-hover:opacity-100 transition-opacity" />

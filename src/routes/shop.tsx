@@ -6,10 +6,16 @@ import { FilterSidebar, type FilterState, type BrandOpt, type CatOpt } from "@/c
 import { supabase } from "@/integrations/supabase/client";
 import { useI18n } from "@/lib/i18n";
 import { SlidersHorizontal, X } from "lucide-react";
+import { z } from "zod";
 
 import { useDataStore } from "@/lib/data-store";
 
+const shopSearchSchema = z.object({
+  category: z.string().optional(),
+});
+
 export const Route = createFileRoute("/shop")({
+  validateSearch: shopSearchSchema,
   head: () => ({ meta: [{ title: "المتجر — Pavilion" }, { name: "description", content: "تصفح اللابتوبات وقطع الغيار" }] }),
   component: Shop,
 });
@@ -17,13 +23,26 @@ export const Route = createFileRoute("/shop")({
 function Shop() {
   const { t, lang } = useI18n();
   const { products, brands, categories: cats, fetchData, loading } = useDataStore();
+  const { category } = Route.useSearch();
   const [maxPrice, setMaxPrice] = useState(5000000);
-  const [filters, setFilters] = useState<FilterState>({ q: "", brands: [], categories: [], price: [0, 5000000] });
+  const [filters, setFilters] = useState<FilterState>(() => ({
+    q: "",
+    brands: [],
+    categories: category ? [category] : [],
+    price: [0, 5000000],
+  }));
   const [isFilterOpen, setIsFilterOpen] = useState(false);
 
   useEffect(() => {
     fetchData();
   }, []);
+
+  useEffect(() => {
+    setFilters((f) => ({
+      ...f,
+      categories: category ? [category] : [],
+    }));
+  }, [category]);
 
   useEffect(() => {
     if (products.length > 0) {

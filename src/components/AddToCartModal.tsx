@@ -12,9 +12,9 @@ export function AddToCartModal({ onOpenCart }: { onOpenCart: () => void }) {
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-fade-in" onMouseDown={close}>
-      <div className="glass-strong rounded-3xl p-6 sm:p-8 max-w-sm w-full shadow-2xl animate-slide-up" onMouseDown={(e) => e.stopPropagation()}>
+      <div className="glass-modal rounded-3xl p-6 sm:p-8 max-w-sm w-full shadow-2xl animate-slide-up" onMouseDown={(e) => e.stopPropagation()}>
         <div className="flex justify-end mb-2">
-          <button onClick={close} className="icon-btn !w-8 !h-8"><X className="w-4 h-4" /></button>
+          <button onClick={close} className="icon-btn !w-8 !h-8 bg-black/5 dark:bg-white/5 border-black/10 dark:border-white/10"><X className="w-4 h-4 text-muted-foreground" /></button>
         </div>
         
         <div className="text-center space-y-4">

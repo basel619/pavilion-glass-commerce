@@ -26,7 +26,7 @@ const dict: Dict = {
   hero_title: { ar: "أفضل اللابتوبات وقطع الغيار في بغداد", en: "Top Laptops & Spare Parts in Baghdad" },
   hero_sub: { ar: "أسعار منافسة، توصيل سريع", en: "Sharp prices, fast delivery" },
   shop_now: { ar: "تسوق الآن", en: "Shop Now" },
-  location: { ar: "بغداد - شارع الصناعة (مقابل الجامعة التكنولوجية)", en: "Baghdad - Al-Sina'a St. (Opposite Univ. of Technology)" },
+  location: { ar: "بغداد - شارع الصناعة (مقابل الجامعة التكنولوجية - مقابل شركة النبع)", en: "Baghdad - Al-Sina'a St. (Opposite Univ. of Technology - Opposite Al-Naba'a Company)" },
   phone: { ar: "هاتف", en: "Phone" },
   cart: { ar: "السلة", en: "Cart" },
   checkout: { ar: "إتمام الطلب", en: "Checkout" },

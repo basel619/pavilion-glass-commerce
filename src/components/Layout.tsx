@@ -157,7 +157,7 @@ export function Layout({ children }: { children: ReactNode }) {
                   { icon: "whatsapp", href: "https://wa.me/9647712715130", color: "hover:bg-[#25D366]/20 hover:border-[#25D366]/30 hover:text-[#25D366]" }
                 ].map((s) => (
                   <a key={s.icon} href={s.href} target="_blank" rel="noopener noreferrer" 
-                     className={`w-12 h-12 rounded-2xl glass-strong border border-white/5 flex items-center justify-center transition-all duration-500 group ${s.color} shadow-lg`}>
+                     className={`w-12 h-12 rounded-2xl bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/5 flex items-center justify-center transition-all duration-500 group ${s.color} shadow-lg`}>
                     <SocialIcon name={s.icon} className="w-5 h-5" />
                   </a>
                 ))}
@@ -167,17 +167,17 @@ export function Layout({ children }: { children: ReactNode }) {
             {/* Links */}
             <div className="grid grid-cols-2 gap-12">
               <div className="space-y-6">
-                <h4 className="text-xs font-black uppercase tracking-[0.2em] text-white/30">{lang === "ar" ? "روابط سريعة" : "QUICK LINKS"}</h4>
+                <h4 className="text-xs font-black uppercase tracking-[0.2em] text-foreground/40 dark:text-white/30">{lang === "ar" ? "روابط سريعة" : "QUICK LINKS"}</h4>
                 <div className="flex flex-col gap-4">
                   {nav.map(n => (
-                    <Link key={n.to} to={n.to} className="text-sm text-muted-foreground hover:text-primary-glow transition-colors font-semibold tracking-wide">{n.label}</Link>
+                    <Link key={n.to} to={n.to} className="text-sm text-muted-foreground hover:text-primary transition-colors font-semibold tracking-wide">{n.label}</Link>
                   ))}
                 </div>
               </div>
               <div className="space-y-6">
-                <h4 className="text-xs font-black uppercase tracking-[0.2em] text-white/30">{lang === "ar" ? "الدعم" : "SUPPORT"}</h4>
+                <h4 className="text-xs font-black uppercase tracking-[0.2em] text-foreground/40 dark:text-white/30">{lang === "ar" ? "الدعم" : "SUPPORT"}</h4>
                 <div className="flex flex-col gap-4">
-                  <a href="https://wa.me/9647712715130" target="_blank" rel="noopener noreferrer" className="text-sm text-muted-foreground hover:text-primary-glow transition-colors font-semibold tracking-wide">
+                  <a href="https://wa.me/9647712715130" target="_blank" rel="noopener noreferrer" className="text-sm text-muted-foreground hover:text-primary transition-colors font-semibold tracking-wide">
                     {lang === "ar" ? "اتصل بنا" : "Contact Us"}
                   </a>
                 </div>
@@ -186,22 +186,22 @@ export function Layout({ children }: { children: ReactNode }) {
 
             {/* Contact Info */}
             <div className="space-y-6 text-center md:text-start flex flex-col items-center md:items-start">
-              <h4 className="text-xs font-black uppercase tracking-[0.2em] text-white/30">{lang === "ar" ? "تواصل معنا" : "GET IN TOUCH"}</h4>
+              <h4 className="text-xs font-black uppercase tracking-[0.2em] text-foreground/40 dark:text-white/30">{lang === "ar" ? "تواصل معنا" : "GET IN TOUCH"}</h4>
               <div className="space-y-6">
-                <a href="tel:009647712715130" className="flex items-center gap-4 text-muted-foreground hover:text-white transition-all group justify-center md:justify-start">
-                  <div className="w-11 h-11 rounded-xl bg-white/5 flex items-center justify-center group-hover:bg-primary/20 transition-colors shadow-lg">
+                <a href="tel:009647712715130" className="flex items-center gap-4 text-muted-foreground hover:text-foreground dark:hover:text-white transition-all group justify-center md:justify-start">
+                  <div className="w-11 h-11 rounded-xl bg-black/5 dark:bg-white/5 flex items-center justify-center group-hover:bg-primary/20 transition-colors shadow-lg">
                     <Phone className="w-4.5 h-4.5 text-primary-glow" />
                   </div>
                   <span className="text-sm font-black tracking-[0.1em]">009647712715130</span>
                 </a>
-                <a href="mailto:info@pavilion-iq.com" className="flex items-center gap-4 text-muted-foreground hover:text-white transition-all group justify-center md:justify-start">
-                  <div className="w-11 h-11 rounded-xl bg-white/5 flex items-center justify-center group-hover:bg-primary/20 transition-colors shadow-lg">
+                <a href="mailto:info@pavilion-iq.com" className="flex items-center gap-4 text-muted-foreground hover:text-foreground dark:hover:text-white transition-all group justify-center md:justify-start">
+                  <div className="w-11 h-11 rounded-xl bg-black/5 dark:bg-white/5 flex items-center justify-center group-hover:bg-primary/20 transition-colors shadow-lg">
                     <Mail className="w-4.5 h-4.5 text-primary-glow" />
                   </div>
                   <span className="text-sm font-black tracking-[0.1em]">info@pavilion-iq.com</span>
                 </a>
                 <div className="flex items-start gap-4 text-muted-foreground justify-center md:justify-start">
-                  <div className="w-11 h-11 rounded-xl bg-white/5 flex items-center justify-center shrink-0 shadow-lg">
+                  <div className="w-11 h-11 rounded-xl bg-black/5 dark:bg-white/5 flex items-center justify-center shrink-0 shadow-lg">
                     <MapPin className="w-4.5 h-4.5 text-primary-glow" />
                   </div>
                   <span className="text-sm font-semibold leading-relaxed max-w-[220px]">{t("location")}</span>
@@ -210,14 +210,14 @@ export function Layout({ children }: { children: ReactNode }) {
             </div>
           </div>
 
-          <div className="pt-10 border-t border-white/5 flex flex-col md:flex-row items-center justify-between gap-8">
-            <p className="text-[10px] font-black tracking-[0.2em] text-white/20 uppercase text-center md:text-start">
+          <div className="pt-10 border-t border-black/5 dark:border-white/5 flex flex-col md:flex-row items-center justify-between gap-8">
+            <p className="text-[10px] font-black tracking-[0.2em] text-foreground/30 dark:text-white/20 uppercase text-center md:text-start">
               © {new Date().getFullYear()} {t("brand")} DATA. {lang === "ar" ? "جميع الحقوق محفوظة" : "ALL RIGHTS RESERVED"}.
             </p>
             <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2.5 px-4 py-2 rounded-full bg-white/5 border border-white/5 shadow-inner">
+              <div className="flex items-center gap-2.5 px-4 py-2 rounded-full bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/5 shadow-inner">
                 <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                <span className="text-[10px] font-black uppercase tracking-[0.3em] text-white/40">{lang === "ar" ? "متصل الآن" : "ONLINE NOW"}</span>
+                <span className="text-[10px] font-black uppercase tracking-[0.3em] text-foreground/45 dark:text-white/40">{lang === "ar" ? "متصل الآن" : "ONLINE NOW"}</span>
               </div>
             </div>
           </div>

@@ -1429,7 +1429,7 @@ function Select({ label, value, onChange, options }: { label: string; value: str
     <div>
       <label className="field-label">{label}</label>
       <select value={value} onChange={(e) => onChange(e.target.value)} className="field-input cursor-pointer">
-        {options.map((o) => <option key={o.value} value={o.value} className="bg-[#0a051a]">{o.label}</option>)}
+        {options.map((o) => <option key={o.value} value={o.value} className="bg-background text-foreground">{o.label}</option>)}
       </select>
     </div>
   );

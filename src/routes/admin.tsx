@@ -428,21 +428,67 @@ function AdminDashboard() {
     return map[s] || s;
   };
 
+  const getStatusClass = (s: string) => {
+    switch (s) {
+      case "delivered":
+        return "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20";
+      case "pending":
+        return "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20";
+      case "confirmed":
+        return "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20";
+      case "shipped":
+        return "bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/20";
+      case "cancelled":
+        return "bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20";
+      default:
+        return "bg-black/5 dark:bg-white/5 text-muted-foreground border-black/10 dark:border-white/10";
+    }
+  };
+
+  const getStatusBadgeClass = (s: string) => {
+    switch (s) {
+      case "delivered": return "badge-success";
+      case "cancelled": return "badge-danger";
+      case "pending": return "badge-warning";
+      case "confirmed": return "badge-info";
+      case "shipped": return "badge-info";
+      default: return "badge-info";
+    }
+  };
+
 
   const exportProductsCSV = () => {
     if (products.length === 0) return toast.error(lang === "ar" ? "لا توجد منتجات للتصدير" : "No products to export");
-    const headers = ["Name AR", "Name EN", "Regular Price", "Sale Price", "Stock", "SKU", "Image URL", "Category ID", "Brand ID"];
-    const rows = products.map(p => [
-      `"${(p.name_ar || "").replace(/"/g, '""')}"`,
-      `"${(p.name_en || "").replace(/"/g, '""')}"`,
-      p.regular_price || 0,
-      p.sale_price || "",
-      p.stock || 0,
-      `"${(p.sku || "").replace(/"/g, '""')}"`,
-      `"${(p.image || "").replace(/"/g, '""')}"`,
-      `"${(p.category_id || "").replace(/"/g, '""')}"`,
-      `"${(p.brand_id || "").replace(/"/g, '""')}"`
-    ]);
+    const headers = [
+      "الاسم بالعربي (Name AR)",
+      "الاسم بالانجليزي (Name EN)",
+      "السعر (Price)",
+      "سعر العرض (Sale Price)",
+      "الكمية (Stock)",
+      "الرمز (SKU)",
+      "رابط الصورة (Image URL)",
+      "القسم (Category)",
+      "الماركة (Brand)",
+      "الوصف بالعربي (Description AR)",
+      "الوصف بالانجليزي (Description EN)"
+    ];
+    const rows = products.map(p => {
+      const cat = cats.find(c => c.id === p.category_id);
+      const brand = brands.find(b => b.id === p.brand_id);
+      return [
+        `"${(p.name_ar || "").replace(/"/g, '""')}"`,
+        `"${(p.name_en || "").replace(/"/g, '""')}"`,
+        p.regular_price || 0,
+        p.sale_price || "",
+        p.stock || 0,
+        `"${(p.sku || "").replace(/"/g, '""')}"`,
+        `"${(p.image || "").replace(/"/g, '""')}"`,
+        `"${(cat ? (lang === "ar" ? cat.name_ar : cat.name_en) : "").replace(/"/g, '""')}"`,
+        `"${(brand ? (lang === "ar" ? brand.name_ar : brand.name_en) : "").replace(/"/g, '""')}"`,
+        `"${(p.description_ar || "").replace(/"/g, '""')}"`,
+        `"${(p.description_en || "").replace(/"/g, '""')}"`
+      ];
+    });
     const csvContent = [headers.join(","), ...rows.map(e => e.join(","))].join("\n");
     const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
@@ -486,6 +532,54 @@ function AdminDashboard() {
         if (cols.length >= 3) {
           const nameAr = cols[0];
           if (!nameAr) continue;
+
+          const categoryName = cols[7] || "";
+          const brandName = cols[8] || "";
+
+          let categoryId = null;
+          if (categoryName) {
+            const matchedCat = cats.find(c => 
+              c.name_en.trim().toLowerCase() === categoryName.trim().toLowerCase() ||
+              c.name_ar.trim().toLowerCase() === categoryName.trim().toLowerCase()
+            );
+            if (matchedCat) {
+              categoryId = matchedCat.id;
+            } else {
+              // Create category automatically
+              const { data: newCat, error: catErr } = await supabase
+                .from("categories")
+                .insert({ name_ar: categoryName, name_en: categoryName })
+                .select()
+                .single();
+              if (!catErr && newCat) {
+                categoryId = newCat.id;
+                cats.push(newCat);
+              }
+            }
+          }
+
+          let brandId = null;
+          if (brandName) {
+            const matchedBrand = brands.find(b => 
+              b.name_en.trim().toLowerCase() === brandName.trim().toLowerCase() ||
+              b.name_ar.trim().toLowerCase() === brandName.trim().toLowerCase()
+            );
+            if (matchedBrand) {
+              brandId = matchedBrand.id;
+            } else {
+              // Create brand automatically
+              const { data: newBrand, error: brandErr } = await supabase
+                .from("brands")
+                .insert({ name_ar: brandName, name_en: brandName })
+                .select()
+                .single();
+              if (!brandErr && newBrand) {
+                brandId = newBrand.id;
+                brands.push(newBrand);
+              }
+            }
+          }
+
           newProducts.push({
             name_ar: nameAr,
             name_en: cols[1] || nameAr,
@@ -495,8 +589,10 @@ function AdminDashboard() {
             in_stock: (Number(cols[4]) || 0) > 0,
             sku: cols[5] || null,
             image: cols[6] || null,
-            category_id: cols[7] || null,
-            brand_id: cols[8] || null,
+            category_id: categoryId,
+            brand_id: brandId,
+            description_ar: cols[9] || null,
+            description_en: cols[10] || null,
           });
         }
       }
@@ -807,10 +903,10 @@ function AdminDashboard() {
                     <select
                       value={o.status}
                       onChange={(e) => updateOrderStatus(o.id, e.target.value)}
-                      className="field-input !h-8 !px-2 !text-xs !rounded-lg cursor-pointer font-bold"
+                      className={`field-input !h-8 !px-2 !text-xs !rounded-lg cursor-pointer font-bold border ${getStatusClass(o.status)}`}
                     >
                       {["pending", "confirmed", "shipped", "delivered", "cancelled"].map((s) => (
-                        <option key={s} value={s} className="bg-[#0a051a]">{getStatusLabel(s)}</option>
+                        <option key={s} value={s} className="bg-background text-foreground">{getStatusLabel(s)}</option>
                       ))}
                     </select>
                   </td>
@@ -1189,7 +1285,7 @@ function AdminDashboard() {
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">{lang === "ar" ? "الحالة:" : "Status:"}</span>
-                    <span className={`badge ${viewingOrder.status === 'delivered' ? 'badge-success' : 'badge-warning'}`}>{viewingOrder.status}</span>
+                    <span className={`badge ${getStatusBadgeClass(viewingOrder.status)}`}>{getStatusLabel(viewingOrder.status)}</span>
                   </div>
                   <div className="flex justify-between text-sm pt-2 border-t border-white/5">
                     <span className="font-bold">{lang === "ar" ? "الإجمالي:" : "Total:"}</span>
